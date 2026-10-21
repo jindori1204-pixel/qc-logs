@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>운송차량 점검표 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 600px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    .kind-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .kind-tab { flex: 1; min-width: 76px; padding: 11px 6px; border: 2px solid #ddd; border-radius: 8px; background: #fff; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; font-family: inherit; color: #888; transition: all .15s; }
+    .kind-tab.active { border-color: #1a3a5c; background: #1a3a5c; color: #fff; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+    .field.hidden { display: none; }
+    .qty-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+
+    .chk-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #f0f0f0; }
+    .chk-row:last-child { border-bottom: none; }
+    .chk-label { font-size: 13px; color: #333; line-height: 1.45; }
+    .chk-right { display: flex; align-items: center; gap: 6px; }
+    .ox-btns { display: flex; gap: 4px; }
+    .ox-btn { width: 40px; padding: 8px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .ox-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .ox-btn.ng.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+    .temp-wrap { position: relative; width: 84px; }
+    .temp-input { width: 100%; padding: 8px 22px 8px 6px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; font-family: inherit; -moz-appearance: textfield; }
+    .temp-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .temp-input:focus { border-color: #1a3a5c; outline: none; }
+    .temp-unit { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #aaa; pointer-events: none; }
+
+    .alert-section { display: none; }
+    .alert-section.visible { display: block; }
+    .alert-section textarea { width: 100%; padding: 10px; border: 1.5px solid #ffcdd2; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; background: #fff8f8; }
+    .alert-section textarea:focus { border-color: #c62828; outline: none; }
+    .alert-section .field label { color: #c62828; font-weight: bold; }
+
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; }
+    .legend { font-size: 11px; color: #888; margin-top: 10px; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 9pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast, .kind-tabs { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>운송차량 점검표</h1>
+    <p>㈜위드프레쉬 · 운행 시마다 작성</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 점검 구분</div>
+    <div class="kind-tabs">
+      <button type="button" class="kind-tab active" data-kind="inbound"  onclick="switchKind('inbound')">입고</button>
+      <button type="button" class="kind-tab" data-kind="outbound" onclick="switchKind('outbound')">출고</button>
+      <button type="button" class="kind-tab" data-kind="general"  onclick="switchKind('general')">운송차량</button>
+      <button type="button" class="kind-tab" data-kind="consign"  onclick="switchKind('consign')">지입차량</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 운행정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>점검일자</label><input type="date" id="date"></div>
+      <div class="field full"><label>차량번호</label><input type="text" id="car_no" placeholder="예) 12가3456"></div>
+      <div class="field full" id="f-item"><label>품목</label><input type="text" id="item_name" placeholder="예) 냉동 절단꽃게"></div>
+      <div class="field full" id="f-qty">
+        <label>수량</label>
+        <div class="qty-row">
+          <input type="number" step="0.1" min="0" inputmode="decimal" id="qty_value" placeholder="수량 입력">
+          <select id="qty_unit">
+            <option value="박스" selected>박스</option>
+            <option value="개">개</option>
+            <option value="kg">kg</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>담당자 (작성)</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field"><label>승인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 관리기준 점검사항 <span class="section-sub">양호 ○ · 불량 ×</span></div>
+    <div id="check-list"></div>
+    <div class="legend">범례 — 양호 ○ · 불량 ×</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 비고</div>
+    <div class="notes-area"><textarea id="note" placeholder="비고 (선택 입력)"></textarea></div>
+  </div>
+
+  <div class="card alert-section" id="alert-section">
+    <div class="section-title">■ 관리기준 이탈사항 및 개선조치</div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>관리기준 이탈사항</label>
+      <textarea id="deviation" placeholder="이탈 내용을 입력하세요"></textarea>
+    </div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>개선 조치사항</label>
+      <textarea id="action_note" placeholder="개선 조치 내용을 입력하세요"></textarea>
+    </div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>조치 결과</label>
+      <textarea id="action_result" placeholder="조치 결과를 입력하세요"></textarea>
+    </div>
+    <div class="field full">
+      <label>조치 일자</label>
+      <input type="date" id="action_date">
+    </div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+const STD_ITEMS = [
+  { id: 'v1', text: '온도기록장치 작동은 양호한가?' },
+  { id: 'v2', text: '운송차량 온도는 적합한가? (냉동 -18℃ 이하)', temp: true },
+  { id: 'v3', text: '차량 내부 청결상태는 양호한가?' },
+  { id: 'v4', text: '차량 외부 청결상태는 양호한가?' },
+  { id: 'v5', text: '차량용 냉각장치(유니트쿨러) 작동상태는 양호한가?' },
+  { id: 'v6', text: '완제품의 적재상태는 양호한가?' },
+  { id: 'v7', text: '적재 중인 완제품의 포장상태는 양호한가?' },
+];
+
+const KINDS = {
+  inbound:  { label: '운송 차량 점검표 (입고)', items: STD_ITEMS, showItem: true,  showQty: true  },
+  outbound: { label: '운송차량 점검표 (출고)',  items: STD_ITEMS, showItem: true,  showQty: true  },
+  general:  { label: '운송차량 점검표',          items: STD_ITEMS, showItem: false, showQty: false },
+  consign:  {
+    label: '지입차량 점검표', showItem: false, showQty: false,
+    items: [
+      { id: 'c1', text: '비식품과 혼재되어 있지는 않는가?' },
+      { id: 'c2', text: '상차전 차량의 예냉 온도는 몇 도인가?', temp: true },
+      { id: 'c3', text: '차량 내부 청결상태는 양호한가?' },
+      { id: 'c4', text: '차량 외부 청결상태는 양호한가?' },
+    ]
+  },
+};
+
+let currentKind = 'inbound';
+
+document.getElementById('date').value = todayStr();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function switchKind(kind) {
+  currentKind = kind;
+  document.querySelectorAll('.kind-tab').forEach(t => t.classList.toggle('active', t.dataset.kind === kind));
+  const cfg = KINDS[kind];
+  document.getElementById('f-item').classList.toggle('hidden', !cfg.showItem);
+  document.getElementById('f-qty').classList.toggle('hidden', !cfg.showQty);
+  renderChecks();
+  refreshAlert();
+}
+
+function renderChecks() {
+  const cfg = KINDS[currentKind];
+  document.getElementById('check-list').innerHTML = cfg.items.map(it => `
+    <div class="chk-row">
+      <div class="chk-label">${it.text}</div>
+      <div class="chk-right">
+        ${it.temp ? `<div class="temp-wrap">
+          <input class="temp-input" type="number" step="0.1" inputmode="decimal" id="temp-${it.id}" placeholder="—">
+          <span class="temp-unit">℃</span>
+        </div>` : ''}
+        <div class="ox-btns">
+          <button type="button" class="ox-btn ok" id="ok-${it.id}" onclick="setOX('${it.id}','ok')">○</button>
+          <button type="button" class="ox-btn ng" id="ng-${it.id}" onclick="setOX('${it.id}','ng')">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function setOX(id, state) {
+  const ok = document.getElementById(`ok-${id}`);
+  const ng = document.getElementById(`ng-${id}`);
+  const already = state === 'ok' ? ok.classList.contains('active') : ng.classList.contains('active');
+  ok.classList.remove('active'); ng.classList.remove('active');
+  if (!already) (state === 'ok' ? ok : ng).classList.add('active');
+  refreshAlert();
+}
+
+function getOX(id) {
+  const ok = document.getElementById(`ok-${id}`);
+  const ng = document.getElementById(`ng-${id}`);
+  if (ok && ok.classList.contains('active')) return 'ok';
+  if (ng && ng.classList.contains('active')) return 'ng';
+  return null;
+}
+
+function refreshAlert() {
+  const bad = KINDS[currentKind].items.some(it => getOX(it.id) === 'ng');
+  document.getElementById('alert-section').classList.toggle('visible', bad);
+}
+
+function numVal(id) {
+  const el = document.getElementById(id);
+  if (!el || el.value === '') return null;
+  const n = parseFloat(el.value);
+  return isNaN(n) ? null : n;
+}
+
+async function saveRecord() {
+  const cfg = KINDS[currentKind];
+  const date = document.getElementById('date').value;
+  const carNo = document.getElementById('car_no').value.trim();
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+
+  if (!date) { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!carNo) { showToast('차량번호를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('담당자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('승인자를 선택하세요.', 'error'); return; }
+
+  const items = {};
+  let hasAlert = false;
+  cfg.items.forEach(it => {
+    const v = getOX(it.id);
+    if (v === 'ng') hasAlert = true;
+    items[it.id] = { text: it.text, value: v, temp: it.temp ? numVal(`temp-${it.id}`) : null };
+  });
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      kind: currentKind,
+      kind_label: cfg.label,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    car_no: carNo,
+    item_name: cfg.showItem ? document.getElementById('item_name').value.trim() : '',
+    qty_value: cfg.showQty ? numVal('qty_value') : null,
+    qty_unit: cfg.showQty ? document.getElementById('qty_unit').value : '',
+    items,
+    note: document.getElementById('note').value.trim(),
+    deviation: hasAlert ? document.getElementById('deviation').value.trim() : '',
+    action_note: hasAlert ? document.getElementById('action_note').value.trim() : '',
+    action_result: hasAlert ? document.getElementById('action_result').value.trim() : '',
+    action_date: hasAlert ? document.getElementById('action_date').value : '',
+    has_alert: hasAlert
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/vehicle_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+switchKind('inbound');
+</script>
+</body>
+</html>

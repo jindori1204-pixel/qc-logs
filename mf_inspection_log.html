@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>MF 산지직송 검품일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-sub { flex: 1; padding: 11px 8px; border: 1.5px solid #1a3a5c; border-radius: 8px; background: #fff; color: #1a3a5c; font-size: 13px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    .btn-sub.fill { background: #1a3a5c; color: #fff; }
+    .btn-sub:disabled { opacity: .5; }
+    .load-msg { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
+    .load-msg.err { color: #c62828; }
+    .load-msg.ok { color: #2e7d32; }
+
+    .add-row { display: none; gap: 8px; margin-top: 10px; }
+    .add-row.show { display: flex; }
+    .add-row select { flex: 1; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; }
+    .add-row input { width: 74px; padding: 10px 6px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; text-align: center; font-family: inherit; }
+
+    .legend-box { background: #f7f9fc; border: 1px solid #e3e8f0; border-radius: 8px; padding: 10px 12px; font-size: 11.5px; color: #555; line-height: 1.6; }
+    .legend-box b { color: #1a3a5c; }
+
+    /* 품목 카드 */
+    .prod { border: 1.5px solid #e3e8f0; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+    .prod.bad { border-color: #ef9a9a; }
+    .prod-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 11px 12px; background: #f7f9fc; border-bottom: 1px solid #e3e8f0; }
+    .prod.bad .prod-head { background: #fff5f5; }
+    .prod-name { font-size: 13.5px; font-weight: bold; color: #1a3a5c; line-height: 1.4; }
+    .prod-meta { font-size: 11px; color: #888; margin-top: 3px; line-height: 1.5; }
+    .tag { display: inline-block; font-size: 10.5px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-right: 4px; vertical-align: 1px; }
+    .tag.a { background: #e3f2fd; color: #1565c0; }
+    .tag.b { background: #fff3e0; color: #e65100; }
+    .tag.thaw { background: #fce4ec; color: #ad1457; }
+    .prod-x { border: none; background: none; color: #bbb; font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1; }
+    .judge { font-size: 12px; font-weight: bold; white-space: nowrap; padding: 3px 9px; border-radius: 12px; }
+    .judge.ok { background: #e8f5e9; color: #2e7d32; }
+    .judge.ng { background: #ffebee; color: #c62828; }
+    .judge.none { background: #eceff1; color: #78909c; }
+    .prod-body { padding: 4px 12px 8px; }
+
+    .num-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px 0 6px; border-bottom: 1px solid #f0f0f0; }
+    .num-grid label { display: block; font-size: 11px; color: #666; margin-bottom: 4px; }
+    .num-grid input { width: 100%; padding: 8px 4px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; font-family: inherit; -moz-appearance: textfield; }
+    .num-grid input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .num-grid input:focus { border-color: #1a3a5c; outline: none; }
+    .num-grid input.bad { border-color: #c62828; background: #fff8f8; }
+    .num-hint { grid-column: 1/-1; font-size: 11px; color: #888; }
+    .num-hint.bad { color: #c62828; font-weight: bold; }
+
+    .chk-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+    .chk-row:last-child { border-bottom: none; }
+    .chk-label { font-size: 12.5px; color: #333; line-height: 1.45; }
+    .chk-label small { display: block; font-size: 11px; color: #999; margin-top: 1px; }
+    .grade { font-size: 10px; font-weight: bold; color: #c62828; margin-left: 4px; }
+    .grade.m { color: #e65100; }
+    .ox-btns { display: flex; gap: 4px; }
+    .ox-btn { width: 44px; min-height: 42px; padding: 8px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .ox-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .ox-btn.ng.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+    .all-ok { margin-top: 6px; width: 100%; padding: 8px; border: 1px dashed #a5d6a7; border-radius: 6px; background: #f6fbf6; color: #2e7d32; font-size: 12px; font-weight: bold; cursor: pointer; font-family: inherit; }
+
+    .alert-section { display: none; }
+    .alert-section.visible { display: block; }
+    .alert-section textarea { width: 100%; padding: 10px; border: 1.5px solid #ffcdd2; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; background: #fff8f8; }
+    .alert-section textarea:focus { border-color: #c62828; outline: none; }
+    .alert-section .field label { color: #c62828; font-weight: bold; }
+    .alert-section input[type=date] { width: 100%; padding: 10px; border: 1.5px solid #ffcdd2; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .ng-summary { font-size: 12px; color: #c62828; background: #fff8f8; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; line-height: 1.6; }
+
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; }
+
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+    .summary div { background: #f7f9fc; border-radius: 8px; padding: 9px 4px; }
+    .summary b { display: block; font-size: 18px; color: #1a3a5c; }
+    .summary span { font-size: 11px; color: #888; }
+    .summary .ngc b { color: #c62828; }
+
+    .bulk { display: none; background: #f6fbf6; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+    .bulk.show { display: block; }
+    .bulk-t { font-size: 11.5px; color: #2e7d32; line-height: 1.5; margin-bottom: 8px; }
+    .bulk-row { display: flex; gap: 8px; }
+    .temp-box { position: relative; flex: 0 0 120px; }
+    .temp-box input { width: 100%; padding: 10px 26px 10px 8px; border: 1.5px solid #a5d6a7; border-radius: 8px; font-size: 14px; text-align: center; font-family: inherit; }
+    .temp-box span { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: #888; font-size: 12px; }
+    .draft-note { background: #fff8e1; border: 1px solid #ffe082; color: #8d6e00; border-radius: 8px; padding: 9px 11px; font-size: 12px; margin-top: 10px; line-height: 1.5; display: none; }
+    .draft-note.show { display: block; }
+    .empty { text-align: center; color: #999; font-size: 13px; padding: 22px 0; line-height: 1.6; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>MF 산지직송 검품일지</h1>
+    <p>㈜위드프레쉬 · 출고일마다 작성 · 검품기준서 WF-QC-104</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 검품정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>검품일자 (출고일)</label><input type="date" id="date" onchange="onDateChange()"></div>
+      <div class="field"><label>검품자 (작성)</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field"><label>승인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn-sub fill" id="btn-load" onclick="loadFromLedger()">📋 일보에서 MF 출고품목 불러오기</button>
+      <button type="button" class="btn-sub" onclick="toggleAdd()" style="flex:0 0 108px;">＋ 직접 추가</button>
+    </div>
+    <div class="add-row" id="add-row">
+      <select id="add-sel"></select>
+      <input type="number" id="add-qty" min="1" inputmode="numeric" placeholder="수량">
+      <button type="button" class="btn-sub fill" style="flex:0 0 56px;" onclick="addManual()">추가</button>
+    </div>
+    <div class="draft-note" id="draft-note"></div>
+    <div class="load-msg" id="load-msg">김현우 부장님 생산·물류일보(쿠팡 수불대장)의 MF 출고내역을 불러옵니다.</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 판정기준 <span class="section-sub">검품기준서 WF-QC-104 요약</span></div>
+    <div class="legend-box">
+      <b>A</b> 활·생물 (세척만 하여 출고) &nbsp;·&nbsp; <b>B</b> 손질 제품 (제품명에 "손질" — 비가식부위 손질 후 세척)<br>
+      <b>품온</b> 0~10℃ (권장 0~5℃, 활 제품은 동결 금지) &nbsp;·&nbsp; <b>중량</b> 표시중량 이상<br>
+      <b>샘플 수</b> 출고 50개 이하 3개 · 51~150개 5개 · 151~500개 8개 · 501개 이상 13개 (샘플이 출고수량보다 많으면 전수)<br>
+      <span style="color:#c62828;font-weight:bold;">치명</span> 1개라도 × → 로트 출고보류 &nbsp;·&nbsp; <span style="color:#e65100;font-weight:bold;">중</span> × → 샘플 2배 추가검품
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 품목별 검품 <span class="section-sub">적합 ○ · 부적합 ×</span></div>
+    <div class="bulk" id="bulk">
+      <div class="bulk-t">실제로 검품한 뒤 사용하세요 — 누르면 모든 품목·항목이 ○ 적합으로 표시됩니다. 이상 품목만 ×로 바꾸세요.</div>
+      <div class="bulk-row">
+        <button type="button" class="btn-sub fill" onclick="bulkOK()">○ 전체 적합</button>
+      </div>
+    </div>
+    <div id="prod-list"><div class="empty">위의 [일보에서 불러오기] 버튼을 누르거나<br>[직접 추가]로 품목을 넣어주세요.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 검품 요약</div>
+    <div class="summary">
+      <div><b id="s-cnt">0</b><span>검품 품목</span></div>
+      <div><b id="s-ok">0</b><span>적합</span></div>
+      <div class="ngc"><b id="s-ng">0</b><span>부적합</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 비고</div>
+    <div class="notes-area"><textarea id="note" placeholder="비고 (선택 입력) — 예) 홍합 입고 선도 양호, 해수 UV 정상 확인"></textarea></div>
+  </div>
+
+  <div class="card alert-section" id="alert-section">
+    <div class="section-title">■ 관리기준 이탈사항 및 개선조치</div>
+    <div class="ng-summary" id="ng-summary"></div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>관리기준 이탈사항</label>
+      <textarea id="deviation" placeholder="예) 생물 홍합 1kg 샘플 5개 중 폐사 개체 2미 혼입"></textarea>
+    </div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>개선 조치사항</label>
+      <textarea id="action_note" placeholder="예) 해당 로트 출고보류 → 전수 재선별, 폐사 개체 제거 후 재계량"></textarea>
+    </div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>조치 결과</label>
+      <textarea id="action_result" placeholder="예) 재선별 후 재검품 적합, 출고"></textarea>
+    </div>
+    <div class="field full">
+      <label>조치 일자</label>
+      <input type="date" id="action_date">
+    </div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';   // QC 일지 저장소
+const LEDGER_URL   = 'https://widfresh-erplot-default-rtdb.asia-southeast1.firebasedatabase.app';   // 쿠팡 수불대장(생산·물류일보)
+// =============================================
+
+// MF 품목 마스터 (직접 추가용 — 쿠팡 SKU 목록 기준)
+const MF_MASTER = [
+  ['생물 홍합 1kg', 1000], ['생물 홍합 3kg', 3000], ['생물 대합 600g', 600], ['생물 대합 1kg', 1000],
+  ['생물 뿔소라 600g', 600], ['생물 뿔소라 1kg', 1000], ['생물 돌멍게 400g', 400], ['생물 돌멍게 1kg', 1000],
+  ['생물 물바지락 700g', 700], ['생물 물바지락 1kg', 1000], ['활새우 800g', 800], ['활새우 1.2kg', 1200],
+  ['생물 꽃게 1kg', 1000], ['생물 꽃게 2kg', 2000], ['생물 꽃게 3kg', 3000],
+  ['활 홍가리비 1kg', 1000], ['활 홍가리비 1.5kg', 1500], ['활 홍가리비 2.5kg', 2500],
+  ['통영 생굴 800g', 800], ['통영 생굴 1kg', 1000], ['통영 생굴 2kg', 2000], ['통영 생굴 3kg', 3000], ['통영 생굴 5kg', 5000],
+  ['김장용 보리새우 600g', 600], ['김장용 보리새우 1.2kg', 1200],
+  ['손질 고등어 500g', 500], ['손질 고등어 900g', 900], ['조림용 토막 고등어 800g', 800], ['조림용 토막 고등어 1kg', 1000],
+  ['손질 황돔 500g', 500], ['손질 황돔 900g', 900], ['손질 백조기 500g', 500], ['손질 백조기 900g', 900],
+  ['생물 손질 오징어 500g', 500], ['생물 손질 오징어 900g', 900],
+  ['손질 오징어(해동) 500g', 500], ['손질 오징어(해동) 900g', 900],
+  ['손질 갑오징어 400g (해동)', 400], ['손질 갑오징어 600g (해동)', 600],
+];
+
+// 점검항목 — grade: c(치명) / m(중)
+const CHECKS = [
+  { id: 'temp',    text: '품온', sub: '0~10℃ (권장 0~5℃) · 활 제품은 얼지 않을 것', grade: 'c' },
+  { id: 'fresh',   text: '선도', sub: '이취(암모니아·부패취)·점질물 없음, 고유 색택·탄력', grade: 'c' },
+  { id: 'alive',   text: '생존 / 폐사 개체', sub: '패류: 벌어져 두드려도 닫히지 않는 개체 없음 · 새우: 활력, 흑변 없음', grade: 'c', only: 'A' },
+  { id: 'wash',    text: '세척 상태', sub: '펄·모래·오물 없음, 족사·따개비·해조류 과다 없음', grade: 'm' },
+  { id: 'trim',    text: '손질 상태', sub: '내장·아가미·비늘·지느러미·먹물·갑(뼈) 잔존 없음', grade: 'm', only: 'B' },
+  { id: 'weight',  text: '중량', sub: '표시중량 이상 (계량 확인)', grade: 'm' },
+  { id: 'pack',    text: '포장', sub: '파손·누수 없음, 아이스팩 투입 (활 제품은 직접 닿지 않게)', grade: 'm' },
+  { id: 'label',   text: '표시사항', sub: '제품명·중량·소비기한·보관방법·SKU 바코드 일치', grade: 'c' },
+  { id: 'foreign', text: '이물', sub: '머리카락·비닐·끈·그물·스티로폼·패각 파편 없음', grade: 'c' },
+];
+
+let products = [];   // {uid, code, name, lot, qty, std_g, type, thaw, raw_lots, src, checks:{}, temp, wmin, wmax, sample}
+let uidSeq = 1;
+let draftId = null, draftPath = null, draftDate = null;   // 미리 등록된 '작성 대기' 기록을 불러온 경우
+
+(function initDate() {
+  const q = new URLSearchParams(location.search).get('date');
+  document.getElementById('date').value = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : todayStr();
+  setTimeout(() => loadDraft(document.getElementById('date').value), 0);
+})();
+document.getElementById('add-sel').innerHTML = MF_MASTER.map((m, i) => `<option value="${i}">${m[0]}</option>`).join('');
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function shortName(p) { return String(p || '').replace(/^위드프레쉬\s*/, '').replace(/^산지직송\s*/, '').replace(/\s*1개$/, '').trim(); }
+function typeOf(name) { return /손질/.test(name) ? 'B' : 'A'; }
+function sampleSize(q) { q = Number(q) || 0; const s = q <= 50 ? 3 : q <= 150 ? 5 : q <= 500 ? 8 : 13; return q > 0 ? Math.min(s, q) : s; }
+function stdFromName(name) {
+  const m = String(name).match(/(\d+(?:\.\d+)?)\s*(kg|g)/i);
+  if (!m) return null;
+  return m[2].toLowerCase() === 'kg' ? Math.round(parseFloat(m[1]) * 1000) : Math.round(parseFloat(m[1]));
+}
+
+let shownDate = '';
+function onDateChange() {
+  if (products.length && !confirm('검품일자를 바꾸면 불러온 품목이 초기화됩니다. 계속할까요?')) {
+    document.getElementById('date').value = shownDate;   // 취소하면 날짜를 되돌림 (불러온 기록과 날짜 불일치 방지)
+    return;
+  }
+  products = []; renderProducts();
+  setMsg('김현우 부장님 생산·물류일보(쿠팡 수불대장)의 MF 출고내역을 불러옵니다.');
+  loadDraft(document.getElementById('date').value);
+}
+
+// ── 미리 등록된 '작성 대기' 기록 불러오기 ─────────────────
+async function loadDraft(date) {
+  draftId = null; draftPath = null; draftDate = null; shownDate = date;
+  const note = document.getElementById('draft-note'); note.classList.remove('show');
+  if (!date) return;
+  const [y, m] = date.split('-');
+  const path = `mf_inspection_logs/${y}/${m}`;
+  try {
+    const data = await fetch(`${FIREBASE_URL}/${path}.json`).then(r => r.json());
+    const recs = Object.entries(data || {}).filter(([, r]) => r && r.meta && r.meta.date === date);
+    const done = recs.filter(([, r]) => r.meta.status !== 'draft');
+    const draft = recs.find(([, r]) => r.meta.status === 'draft');
+    if (draft) {
+      if (document.getElementById('date').value !== date) return;   // 응답 오기 전에 날짜가 바뀐 경우
+      draftId = draft[0]; draftPath = path; draftDate = date;
+      products = Object.keys(draft[1].items || {}).sort().map(k => {
+        const it = draft[1].items[k];
+        return newProduct({ code: it.code, name: it.name, lot: it.lot, qty: it.qty, std_g: it.std_g, thaw: it.thaw, raw_lots: it.raw_lots, memo: it.memo, src: 'ledger' });
+      });
+      renderProducts();
+      note.innerHTML = `📌 ${date} 작성 대기 기록을 불러왔습니다 (일보 기준 ${products.length}품목). 검품 후 저장하면 이 기록이 완료 처리됩니다.`;
+      note.classList.add('show');
+      setMsg('');
+    } else if (done.length) {
+      note.innerHTML = `✔ ${date} MF 검품일지가 이미 ${done.length}건 저장되어 있습니다. 조회·결재 화면에서 확인하세요.`;
+      note.classList.add('show');
+    }
+  } catch (e) { /* 조회 실패 시 일반 작성 */ }
+}
+
+function bulkOK() {
+  products.forEach(p => itemsFor(p).forEach(c => { if (!p.checks[c.id]) p.checks[c.id] = 'ok'; }));
+  renderProducts();
+  showToast('전체 적합으로 표시했습니다. 이상 품목은 ×로 바꾸세요.', 'success');
+}
+function setMsg(t, cls) { const el = document.getElementById('load-msg'); el.textContent = t; el.className = 'load-msg ' + (cls || ''); }
+
+// ── 일보(쿠팡 수불대장)에서 MF 출고품목 불러오기 ─────────────────
+async function fetchLedgerOut(date) {
+  // 1순위: 날짜 인덱스 조회, 안 되면 최근 기록을 받아서 날짜로 거름
+  const q1 = `${LEDGER_URL}/쿠팡수불/out.json?orderBy=${encodeURIComponent('"date"')}&equalTo=${encodeURIComponent('"' + date + '"')}`;
+  try {
+    const r = await fetch(q1);
+    if (r.ok) { const d = await r.json(); if (d && !d.error) return d; }
+  } catch (e) { /* 다음 방법 시도 */ }
+  const q2 = `${LEDGER_URL}/쿠팡수불/out.json?orderBy=${encodeURIComponent('"$key"')}&limitToLast=800`;
+  const r2 = await fetch(q2);
+  if (!r2.ok) throw new Error('HTTP ' + r2.status);
+  const d2 = await r2.json();
+  // 최근 800건보다 이전 날짜면 전체 일보를 받음 (날짜 인덱스가 없을 때)
+  const recs = (Array.isArray(d2) ? d2 : Object.values(d2 || {})).filter(Boolean);
+  const oldest = recs.reduce((a, o) => (o.date && o.date < a ? o.date : a), '9999-12-31');
+  if (date >= oldest) return d2;
+  const r3 = await fetch(`${LEDGER_URL}/쿠팡수불/out.json`);
+  if (!r3.ok) throw new Error('HTTP ' + r3.status);
+  return await r3.json();
+}
+
+async function loadFromLedger() {
+  const date = document.getElementById('date').value;
+  if (!date) { showToast('검품일자를 먼저 선택하세요.', 'error'); return; }
+  const btn = document.getElementById('btn-load');
+  btn.disabled = true; setMsg('일보 불러오는 중...');
+  try {
+    const data = await fetchLedgerOut(date);
+    const rows = (Array.isArray(data) ? data : Object.values(data || {}))
+      .filter(o => o && o.date === date && o.ch === 'MF');
+    if (!rows.length) {
+      setMsg(`${date} 일보에 MF 출고내역이 없습니다. 일보가 아직 입력되지 않았다면 [직접 추가]로 넣어주세요.`, 'err');
+      return;
+    }
+    // 같은 품목코드·LOT는 수량 합산
+    const G = new Map();
+    rows.forEach(o => {
+      const k = (o.code || o.pname) + '|' + (o.lot || '');
+      const g = G.get(k) || { o, qty: 0, raws: new Set() };
+      g.qty += Number(o.qty) || 0;
+      (Array.isArray(o.raws) ? o.raws : Object.values(o.raws || {})).forEach(r => { if (r && r.lot && !r.sauce) g.raws.add(r.lot); });
+      G.set(k, g);
+    });
+    let added = 0;
+    G.forEach(({ o, qty, raws }) => {
+      if (products.some(p => p.code === o.code && p.lot === o.lot && p.src === 'ledger')) return;
+      const name = shortName(o.pname || o.key);
+      products.push(newProduct({
+        code: o.code || '', name, lot: o.lot || '', qty,
+        std_g: o.kg ? Math.round(o.kg * 1000) : stdFromName(name),
+        thaw: /해동/.test((o.pname || '') + (o.memo || '')),
+        raw_lots: [...raws].join(', '), memo: o.memo || '', src: 'ledger',
+      }));
+      added++;
+    });
+    renderProducts();
+    setMsg(`${date} 일보에서 MF ${G.size}품목을 불러왔습니다.` + (added < G.size ? ` (이미 있는 ${G.size - added}품목 제외)` : ''), 'ok');
+  } catch (e) {
+    console.error(e);
+    const local = location.protocol !== 'http:' && location.protocol !== 'https:';
+    setMsg(local ? '파일로 직접 열면 휴대폰에서는 불러오기가 안 됩니다. 인터넷 주소(github.io)로 열어주세요.'
+                 : '일보 불러오기 실패 — 인터넷 연결을 확인하세요. [직접 추가]로 입력할 수 있습니다.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function newProduct(o) {
+  return {
+    uid: uidSeq++, code: o.code || '', name: o.name, lot: o.lot || '', qty: o.qty || 0,
+    std_g: o.std_g || null, type: typeOf(o.name), thaw: !!o.thaw, raw_lots: o.raw_lots || '',
+    memo: o.memo || '', src: o.src || 'manual',
+    sample: sampleSize(o.qty), checks: {},
+  };
+}
+
+function toggleAdd() { document.getElementById('add-row').classList.toggle('show'); }
+function addManual() {
+  const i = Number(document.getElementById('add-sel').value);
+  const qty = Number(document.getElementById('add-qty').value) || 0;
+  const [name, g] = MF_MASTER[i];
+  const date = document.getElementById('date').value || todayStr();
+  products.push(newProduct({ name, qty, std_g: g, thaw: /해동/.test(name), lot: 'P' + date.slice(2).replace(/-/g, ''), src: 'manual' }));
+  document.getElementById('add-qty').value = '';
+  renderProducts();
+}
+function removeProduct(uid) {
+  if (!confirm('이 품목을 검품 목록에서 뺄까요?')) return;
+  products = products.filter(p => p.uid !== uid); renderProducts();
+}
+
+// ── 판정 ─────────────────────────────────────────────
+function itemsFor(p) { return CHECKS.filter(c => !c.only || c.only === p.type); }
+function ngList(p) {
+  const out = [];
+  itemsFor(p).forEach(c => { if (p.checks[c.id] === 'ng') out.push(c.text); });
+  return out;
+}
+function judgeOf(p) {
+  if (ngList(p).length) return 'ng';
+  const allChecked = itemsFor(p).every(c => p.checks[c.id]);
+  return allChecked ? 'ok' : null;
+}
+
+// ── 화면 ─────────────────────────────────────────────
+function renderProducts() {
+  const box = document.getElementById('prod-list');
+  document.getElementById('bulk').classList.toggle('show', products.length > 0);
+  if (!products.length) {
+    box.innerHTML = '<div class="empty">위의 [일보에서 불러오기] 버튼을 누르거나<br>[직접 추가]로 품목을 넣어주세요.</div>';
+    refreshSummary(); return;
+  }
+  box.innerHTML = products.map(p => `
+    <div class="prod" id="prod-${p.uid}">
+      <div class="prod-head">
+        <div>
+          <div class="prod-name"><span class="tag ${p.type === 'A' ? 'a' : 'b'}">${p.type === 'A' ? 'A 활·생물' : 'B 손질'}</span>${p.thaw ? '<span class="tag thaw">해동</span>' : ''}${esc(p.name)}</div>
+          <div class="prod-meta">${p.code ? esc(p.code) + ' · ' : ''}LOT ${esc(p.lot || '—')} · 출고 ${p.qty}개 · 표시중량 ${p.std_g ? p.std_g + 'g' : '—'}${p.raw_lots ? '<br>원료 LOT ' + esc(p.raw_lots) : ''}${p.src === 'manual' ? '<br><span style="color:#e65100">직접 추가한 품목</span>' : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="judge none" id="judge-${p.uid}">미판정</span>
+          <button type="button" class="prod-x" onclick="removeProduct(${p.uid})" aria-label="품목 삭제">✕</button>
+        </div>
+      </div>
+      <div class="prod-body">
+        <div class="num-grid" style="grid-template-columns:1fr 3fr;align-items:end;">
+          <div><label>샘플 수</label><input type="number" min="1" inputmode="numeric" value="${p.sample}" onchange="setNum(${p.uid},'sample',this)"></div>
+          <div class="num-hint">기준: 품온 0~10℃ · 중량 ${p.std_g ? p.std_g + 'g' : '표시중량'} 이상</div>
+        </div>
+        ${itemsFor(p).map(c => `
+          <div class="chk-row">
+            <div class="chk-label">${c.text}${c.id === 'label' && p.thaw ? ' + "해동품" 표시' : ''}<span class="grade ${c.grade === 'm' ? 'm' : ''}">${c.grade === 'c' ? '치명' : '중'}</span><small>${c.sub}</small></div>
+            <div class="ox-btns">
+              <button type="button" class="ox-btn ok${p.checks[c.id] === 'ok' ? ' active' : ''}" id="ok-${p.uid}-${c.id}" onclick="setOX(${p.uid},'${c.id}','ok')">○</button>
+              <button type="button" class="ox-btn ng${p.checks[c.id] === 'ng' ? ' active' : ''}" id="ng-${p.uid}-${c.id}" onclick="setOX(${p.uid},'${c.id}','ng')">×</button>
+            </div>
+          </div>`).join('')}
+        <button type="button" class="all-ok" onclick="allOK(${p.uid})">○ 점검항목 모두 적합</button>
+      </div>
+    </div>`).join('');
+  products.forEach(refreshProduct);
+  refreshSummary();
+}
+
+function getP(uid) { return products.find(p => p.uid === uid); }
+function setNum(uid, key, el) {
+  const p = getP(uid); const v = el.value === '' ? null : parseFloat(el.value);
+  p[key] = (v === null || isNaN(v)) ? null : v;
+  refreshProduct(p); refreshSummary();
+}
+function setOX(uid, cid, state) {
+  const p = getP(uid);
+  p.checks[cid] = p.checks[cid] === state ? null : state;
+  document.getElementById(`ok-${uid}-${cid}`).classList.toggle('active', p.checks[cid] === 'ok');
+  document.getElementById(`ng-${uid}-${cid}`).classList.toggle('active', p.checks[cid] === 'ng');
+  refreshProduct(p); refreshSummary();
+}
+function allOK(uid) {
+  const p = getP(uid);
+  itemsFor(p).forEach(c => {
+    p.checks[c.id] = 'ok';
+    document.getElementById(`ok-${uid}-${c.id}`).classList.add('active');
+    document.getElementById(`ng-${uid}-${c.id}`).classList.remove('active');
+  });
+  refreshProduct(p); refreshSummary();
+}
+function refreshProduct(p) {
+  const j = judgeOf(p);
+  const el = document.getElementById(`judge-${p.uid}`);
+  el.className = 'judge ' + (j || 'none');
+  el.textContent = j === 'ok' ? '적합' : j === 'ng' ? '부적합' : '미판정';
+  document.getElementById(`prod-${p.uid}`).classList.toggle('bad', j === 'ng');
+}
+function refreshSummary() {
+  const js = products.map(judgeOf);
+  document.getElementById('s-cnt').textContent = products.length;
+  document.getElementById('s-ok').textContent = js.filter(j => j === 'ok').length;
+  document.getElementById('s-ng').textContent = js.filter(j => j === 'ng').length;
+  const bad = products.filter(p => judgeOf(p) === 'ng');
+  document.getElementById('alert-section').classList.toggle('visible', bad.length > 0);
+  document.getElementById('ng-summary').innerHTML = bad.map(p => `• ${esc(p.name)} — ${ngList(p).map(esc).join(', ')}`).join('<br>');
+}
+
+// ── 저장 ─────────────────────────────────────────────
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+  if (!date) { showToast('검품일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('검품자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('승인자를 선택하세요.', 'error'); return; }
+  if (!products.length) { showToast('검품할 품목이 없습니다.', 'error'); return; }
+  const undone = products.filter(p => !judgeOf(p));
+  if (undone.length) {
+    showToast(`판정이 끝나지 않은 품목이 ${undone.length}개 있습니다. (점검항목 ○× 입력)`, 'error');
+    document.getElementById('prod-' + undone[0].uid).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const items = {};
+  products.forEach((p, i) => {
+    const checks = {};
+    itemsFor(p).forEach(c => { checks[c.id] = { text: c.text, grade: c.grade, value: p.checks[c.id] || null }; });
+    items['p' + String(i + 1).padStart(2, '0')] = {
+      code: p.code, name: p.name, lot: p.lot, qty: p.qty, std_g: p.std_g, type: p.type, thaw: p.thaw,
+      raw_lots: p.raw_lots, src: p.src, sample: p.sample,
+      checks, judge: judgeOf(p), ng: ngList(p),
+    };
+  });
+  const ngCount = products.filter(p => judgeOf(p) === 'ng').length;
+  const hasAlert = ngCount > 0;
+
+  const payload = {
+    meta: { date, inspector, confirmer, created_at: Date.now(), reviewed: false, reviewed_at: null, status: 'done' },
+    standard: 'WF-QC-104',
+    source: products.some(p => p.src === 'ledger') ? '생산·물류일보(쿠팡 수불대장) MF' : '직접 입력',
+    items, item_count: products.length, ng_count: ngCount,
+    note: document.getElementById('note').value.trim(),
+    deviation: hasAlert ? document.getElementById('deviation').value.trim() : '',
+    action_note: hasAlert ? document.getElementById('action_note').value.trim() : '',
+    action_result: hasAlert ? document.getElementById('action_result').value.trim() : '',
+    action_date: hasAlert ? document.getElementById('action_date').value : '',
+    has_alert: hasAlert,
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    // 작성 대기 기록과 날짜가 정확히 같을 때만 그 키에 PUT, 아니면 새 키로 POST (월 전체를 PUT으로 덮어쓰는 일이 없게)
+    const useDraft = !!draftId && draftDate === date && draftPath === `mf_inspection_logs/${year}/${month}`;
+    const url = useDraft
+      ? `${FIREBASE_URL}/${draftPath}/${draftId}.json`
+      : `${FIREBASE_URL}/mf_inspection_logs/${year}/${month}.json`;
+    const res = await fetch(url, { method: useDraft ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => { location.href = location.pathname; }, 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+</script>
+</body>
+</html>

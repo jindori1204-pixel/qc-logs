@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>폐기물 반출대장 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 15px; background: #f0f2f5; color: #222; }
+    .container { max-width: 560px; margin: 0 auto; padding: 16px 14px 32px; }
+
+    .page-header { text-align: center; padding: 20px 0 16px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 4px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 11px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit; color: #222; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1 / -1; }
+    .field input[readonly] { background: #f5f6f8; color: #666; }
+
+    .status-btns { display: flex; gap: 6px; margin-top: 4px; }
+    .st-btn { flex: 1; padding: 12px 4px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; background: #fff; font-family: inherit; color: #888; }
+    .st-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .st-btn.fail.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .alert-section { display: none; }
+    .alert-section.visible { display: block; }
+    .alert-section textarea { width: 100%; padding: 10px; border: 1.5px solid #ffcdd2; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 70px; background: #fff8f8; }
+    .alert-section textarea:focus { border-color: #c62828; outline: none; }
+
+    .btn-save { width: 100%; padding: 17px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; cursor: not-allowed; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 10pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 10px; }
+      .btn-save, .toast { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <h1>폐기물 반출대장</h1>
+    <p>㈜위드프레쉬 · 수거시마다 작성</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>반출일자</label><input type="date" id="date"></div>
+      <div class="field full">
+        <label>작성자</label>
+        <select id="writer">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장" selected>전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 폐기물 정보 -->
+  <div class="card">
+    <div class="section-title">■ 폐기물 정보</div>
+    <div class="info-grid">
+      <div class="field full">
+        <label>폐기물내역(부산물·폐기물)</label>
+        <select id="item" onchange="onItemChange()">
+          <option value="">선택하세요</option>
+        </select>
+      </div>
+      <div class="field full" id="etc-name-field" style="display:none;">
+        <label>품목명 직접입력</label>
+        <input type="text" id="etc_name" placeholder="품목명을 입력하세요">
+      </div>
+      <div class="field full">
+        <label>처리(반출)업체</label>
+        <input type="text" id="processor" placeholder="자동 입력">
+      </div>
+      <div class="field full">
+        <label>반출량</label>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+          <input type="number" step="0.1" min="0" inputmode="decimal" id="qty_value" placeholder="수량 입력">
+          <select id="qty_unit">
+            <option value="kg" selected>kg</option>
+            <option value="톤">톤</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 출고 후 세척 및 소독여부 -->
+  <div class="card">
+    <div class="section-title">■ 출고 후 세척 및 소독여부</div>
+    <div class="status-btns">
+      <button type="button" class="st-btn ok" id="wash_ok" onclick="setWash('ok')">적합 (○)</button>
+      <button type="button" class="st-btn fail" id="wash_fail" onclick="setWash('fail')">부적합 (×)</button>
+    </div>
+  </div>
+
+  <!-- 비고 -->
+  <div class="card">
+    <div class="section-title">■ 비고</div>
+    <input type="text" id="note" placeholder="비고 (선택 입력)" style="width:100%;padding:11px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;">
+  </div>
+
+  <!-- 이상발생 시 관리기준 이탈사항 -->
+  <div class="card alert-section" id="alert-section">
+    <div class="section-title">■ 관리기준 이탈사항 및 개선조치</div>
+    <textarea id="action_note" placeholder="이탈사항 및 개선조치사항을 입력하세요"></textarea>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+// ── 폐기물 품목 마스터 — 품목 선택 시 처리업체가 자동으로 채워집니다 ──
+const WASTE_ITEMS = [
+  { id: 'squid_gut',       label: '오징어내장(부산물)',   processor: '동원피드' },
+  { id: 'mixed_fish',      label: '잡어(부산물)',         processor: '동원피드' },
+  { id: 'crab_leg',        label: '꽃게다리',             processor: '조혜정멸치연구소' },
+  { id: 'crab_back',       label: '꽃게등',               processor: '조혜정멸치연구소' },
+  { id: 'crab_shell',      label: '꽃게껍질',             processor: '조혜정멸치연구소' },
+  { id: 'crab_byproduct',  label: '꽃게부산물',           processor: '(주)HS아쿠아피드 고성공장' },
+  { id: 'seafood_residue', label: '수산물가공잔재물',     processor: '(주)HS아쿠아피드 고성공장' },
+  { id: 'etc',              label: '기타(직접입력)',       processor: '' },
+];
+
+document.getElementById('date').value = todayStr();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── 품목 셀렉트 초기화 ──
+(function initItems() {
+  const sel = document.getElementById('item');
+  WASTE_ITEMS.forEach(it => {
+    const o = document.createElement('option');
+    o.value = it.id; o.textContent = it.label;
+    sel.appendChild(o);
+  });
+})();
+
+function onItemChange() {
+  const id = document.getElementById('item').value;
+  const it = WASTE_ITEMS.find(w => w.id === id);
+  const etcField = document.getElementById('etc-name-field');
+  const processorField = document.getElementById('processor');
+  if (!it) { processorField.value = ''; processorField.readOnly = false; etcField.style.display = 'none'; return; }
+  if (it.id === 'etc') {
+    etcField.style.display = 'block';
+    processorField.value = '';
+    processorField.readOnly = false;
+  } else {
+    etcField.style.display = 'none';
+    processorField.value = it.processor;
+    processorField.readOnly = true;
+  }
+}
+
+function setWash(status) {
+  document.getElementById('wash_ok').classList.toggle('active', status === 'ok');
+  document.getElementById('wash_fail').classList.toggle('active', status === 'fail');
+  document.getElementById('alert-section').classList.toggle('visible', status === 'fail');
+}
+setWash('ok'); // 기본값: 적합(○)
+
+function getWash() {
+  if (document.getElementById('wash_ok').classList.contains('active')) return 'ok';
+  if (document.getElementById('wash_fail').classList.contains('active')) return 'fail';
+  return null;
+}
+
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const writer = document.getElementById('writer').value;
+  const itemId = document.getElementById('item').value;
+  const it = WASTE_ITEMS.find(w => w.id === itemId);
+  const itemLabel = itemId === 'etc' ? document.getElementById('etc_name').value.trim() : (it ? it.label : '');
+  const processor = document.getElementById('processor').value.trim();
+  const qtyValue = document.getElementById('qty_value').value;
+  const qtyUnit = document.getElementById('qty_unit').value;
+  const wash = getWash();
+
+  if (!date) { showToast('반출일자를 입력하세요.', 'error'); return; }
+  if (!writer) { showToast('작성자를 선택하세요.', 'error'); return; }
+  if (!itemId) { showToast('폐기물내역을 선택하세요.', 'error'); return; }
+  if (itemId === 'etc' && !itemLabel) { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!processor) { showToast('처리업체를 입력하세요.', 'error'); return; }
+  if (!qtyValue) { showToast('반출량을 입력하세요.', 'error'); return; }
+  if (!wash) { showToast('출고 후 세척 및 소독여부를 선택하세요.', 'error'); return; }
+
+  const hasIssue = wash === 'fail';
+  const [year, month] = date.split('-');
+  const now = Date.now();
+  const payload = {
+    // 이 서류는 별도 결재 절차 없이 작성자 기록으로 바로 보관됩니다.
+    meta: { date, writer, created_at: now, reviewed: true, reviewed_at: now, confirmed_by: writer },
+    item: itemLabel,
+    processor,
+    qty_value: parseFloat(qtyValue),
+    qty_unit: qtyUnit,
+    wash_status: wash,
+    note: document.getElementById('note').value.trim(),
+    action_note: document.getElementById('action_note').value.trim(),
+    has_issue: hasIssue
+  };
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/waste_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크 또는 Firebase URL을 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+</script>
+</body>
+</html>

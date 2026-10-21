@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>공정관리 점검일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 760px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    .approve-line { font-size: 11.5px; color: #888; margin-top: 8px; }
+    .approve-line b { color: #1a3a5c; }
+
+    /* 회차 라벨 */
+    .round-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .round-labels .rl label { display: block; font-size: 11.5px; color: #666; margin-bottom: 4px; }
+    .round-labels .rl input { width: 100%; padding: 9px; border: 1.5px solid #ddd; border-radius: 7px; font-size: 13px; font-family: inherit; text-align: center; }
+    .round-labels .rl input:focus { border-color: #1a3a5c; outline: none; }
+
+    /* 공정 항목 카드 */
+    .proc-item { border: 1.5px solid #e6ebf1; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .proc-item:last-child { margin-bottom: 0; }
+    .proc-item.has-alert { border-color: #ffcdd2; background: #fff8f8; }
+    .proc-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+    .proc-name { background: #1a3a5c; color: #fff; font-size: 11.5px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+    .proc-cat { background: #eef3f8; color: #2e5f8a; font-size: 11.5px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+    .proc-std { font-size: 12.5px; color: #3a3a3a; line-height: 1.6; margin-bottom: 11px; }
+    .proc-rounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .round-col { min-width: 0; border: 1.5px solid #e6ebf1; border-radius: 8px; padding: 9px 8px; background: #fafcfe; }
+    .round-title { font-size: 11px; color: #2e5f8a; font-weight: bold; text-align: center; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .yn-btns { display: flex; gap: 5px; }
+    .yn-btn { flex: 1; padding: 9px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .yn-btn.yes.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .yn-btn.no.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .rec-fields { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+    .rec-f-row { display: flex; align-items: center; gap: 4px; }
+    .rec-f-row .f-label { font-size: 10.5px; color: #888; min-width: 26px; }
+    .rec-f-row .num-input { flex: 1; min-width: 0; padding: 7px 3px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; font-family: inherit; background: #fff; -moz-appearance: textfield; }
+    .rec-f-row .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .rec-f-row .num-input:focus { border-color: #1a3a5c; outline: none; }
+    .rec-f-row .f-unit { font-size: 10.5px; color: #888; min-width: 20px; }
+    .rec-date { width: 100%; padding: 7px 3px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; font-family: inherit; background: #fff; margin-bottom: 8px; }
+
+    .proc-action { display: none; margin-top: 11px; }
+    .proc-action.visible { display: block; }
+    .proc-action label { font-size: 11px; color: #c62828; font-weight: bold; display: block; margin-bottom: 5px; }
+    .proc-action textarea { width: 100%; padding: 8px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 12.5px; font-family: inherit; resize: vertical; min-height: 46px; background: #fff; }
+
+    /* ── 사진 첨부 ── */
+    .photo-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-photo { display: inline-block; padding: 12px 18px; background: #2e5f8a; color: #fff; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-photo:active { background: #1a3a5c; }
+    .photo-count { font-size: 12px; color: #888; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 12px; }
+    .photo-thumb { position: relative; border: 1.5px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafafa; }
+    .photo-thumb img { width: 100%; height: 104px; object-fit: cover; display: block; }
+    .photo-del { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; font-family: inherit; }
+    .photo-empty { font-size: 12px; color: #bbb; padding: 14px 0; text-align: center; border: 1.5px dashed #e0e0e0; border-radius: 8px; margin-top: 12px; }
+    .photo-hint { font-size: 11px; color: #999; margin-top: 8px; line-height: 1.5; }
+
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 66px; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 8pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast, .btn-photo, .photo-del { display: none !important; }
+      .proc-item { border: 1px solid #999; border-radius: 0; margin-bottom: 4px; padding: 6px; page-break-inside: avoid; break-inside: avoid; }
+      .photo-thumb img { height: auto; }
+    }
+    /* 생산일보 불러오기 */
+    .btn-ledger { width: 100%; min-height: 46px; padding: 10px; border: 1.5px solid #1a3a5c; border-radius: 8px; background: #fff; color: #1a3a5c; font-size: 13.5px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    .btn-ledger:disabled { opacity: .5; }
+    .lg-msg { font-size: 12px; color: #666; margin-top: 8px; line-height: 1.5; }
+    .lg-msg.err { color: #c62828; }
+    .lg-chips { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .lg-chip { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 9px 12px; border: 1.5px solid #e3e8f0; border-radius: 10px; background: #f7f9fc; text-align: left; cursor: pointer; font-family: inherit; color: #222; }
+    .lg-chip.on { border-color: #1a3a5c; background: #eaf1f8; }
+    .lg-chip .t { flex: 1; min-width: 0; }
+    .lg-chip b { display: block; font-size: 13.5px; color: #1a3a5c; }
+    .lg-chip small { display: block; font-size: 11.5px; color: #777; margin-top: 2px; line-height: 1.4; }
+    .lg-st { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; white-space: nowrap; }
+    .lg-st.miss { background: #ffebee; color: #c62828; }
+    .lg-st.done { background: #e8f5e9; color: #2e7d32; }
+    .lg-detail { margin-top: 10px; border: 1px solid #e3e8f0; border-radius: 8px; overflow-x: auto; }
+    .lg-detail table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .lg-detail th { background: #f7f9fc; color: #555; padding: 6px 8px; text-align: left; white-space: nowrap; }
+    .lg-detail td { padding: 6px 8px; border-top: 1px solid #f0f0f0; }
+    .lg-detail td.n { text-align: right; white-space: nowrap; }
+    .lg-note { font-size: 11.5px; color: #8d6e00; background: #fff8e1; border-radius: 6px; padding: 7px 9px; margin-top: 8px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>공정관리 점검일지</h1>
+    <p>㈜위드프레쉬</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full">
+        <label>제품군 (점검 양식 선택)</label>
+        <select id="product" onchange="onProductChange()"></select>
+      </div>
+      <div class="field full">
+        <label>제품명</label>
+        <input type="text" id="product_name" placeholder="예) 손질가리비 500g">
+      </div>
+      <div class="field full">
+        <label>점검일자</label>
+        <input type="date" id="date" onchange="clearLedger()">
+      </div>
+      <div class="field full">
+        <button type="button" class="btn-ledger" id="btn-ledger" onclick="loadLedgerDay()">📋 생산일보에서 불러오기 (김현우 부장 쿠팡 수불대장)</button>
+        <div id="ledger-box"></div>
+      </div>
+      <div class="field">
+        <label>점검자</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>확인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+    <div class="approve-line" id="approve-line"></div>
+  </div>
+
+  <!-- 점검표 -->
+  <div class="card">
+    <div class="section-title">■ 공정별 점검결과 <span class="section-sub">적합 O · 부적합 X · 해당없음 −</span></div>
+    <div class="round-labels">
+      <div class="rl"><label>점검결과 ① 시각/구분</label><input id="round1_label" placeholder="예) 오전" oninput="syncRoundTitles()"></div>
+      <div class="rl"><label>점검결과 ② 시각/구분</label><input id="round2_label" placeholder="예) 오후" oninput="syncRoundTitles()"></div>
+    </div>
+    <div id="proc-list"></div>
+  </div>
+
+  <!-- 날인확인(현물직인) 사진 -->
+  <div class="card">
+    <div class="section-title">■ 날인확인 (현물직인) <span class="section-sub">현물 직인을 촬영해서 첨부하세요</span></div>
+    <div class="photo-actions">
+      <label class="btn-photo">📷 사진 촬영 / 선택
+        <input type="file" accept="image/*" capture="environment" multiple hidden onchange="addPhotos(this,'stamp')">
+      </label>
+      <span class="photo-count" id="cnt-stamp">0 / 4장</span>
+    </div>
+    <div id="grid-stamp"></div>
+    <div class="photo-hint">※ 촬영한 사진은 자동으로 압축(가로 900px)되어 저장됩니다. 최대 4장.</div>
+  </div>
+
+  <!-- 비고 / 확인 -->
+  <div class="card">
+    <div class="section-title">■ 비고</div>
+    <div class="notes-area"><textarea id="note" placeholder="비고를 입력하세요"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="section-title">■ 확인 (특이사항·개선조치)</div>
+    <div class="notes-area"><textarea id="confirm_note" placeholder="확인 내용 및 개선조치를 입력하세요"></textarea></div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// ── 행 정의 헬퍼 ──────────────────────────────────────────
+// R(공정명, 관리항목, 관리기준, 옵션)
+//   옵션: { f: [{k,u,label}] 수치입력, date:true 날짜입력, yn:false 적/부 버튼 숨김 }
+function R(proc, item, std, opt) { return Object.assign({ proc, item, std, yn: true }, opt || {}); }
+
+const G3 = [{ k:'w1', u:'g' }, { k:'w2', u:'g' }, { k:'w3', u:'g' }];
+const FRZ = [{ k:'temp', u:'℃' }, { k:'hour', u:'시간' }];
+
+// ── 제품군별 공정 마스터 (실물 양식 172~178과 동일한 순서·문구) ──
+const PRODUCTS = {
+  shrimp: {
+    label: '새우젓 (172)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관 방법 확인 (10℃이하 냉장보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('선별','이물','드럼통에서 새우젓을 꺼내 선별대에 올려 이물을 선별한다. (2차 선별)'),
+      R('세척','염도','염도 25%의 소금물에 새우젓을 세척한다. (이물 제거 및 으스러짐 방지)'),
+      R('내포장','중량확인 포장방법','통에 새우젓을 중량만큼 담은 후 뚜껑을 닫는다. (중량 +10% 이내 오차허용)', { f: G3 }),
+      R('내포장','소비기한','제조일로부터 12개월까지 (냉장)', { date: true, yn: false }),
+      R('금속검출','금속검출기','금속검출기를 통과해 금속성 이물을 걸러낸다. (Fe 2.5mm, SUS 4.0mm 이상 불검출)'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','10℃ 이하'),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 10℃ 이하'),
+    ]
+  },
+  oyster: {
+    label: '생굴·냉동굴·멍게·오만둥이 (172)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관 방법 확인 (0~1℃ 냉장보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 브로아 세척수조에서 세척'),
+      R('2차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척'),
+      R('3차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('3차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척'),
+      R('급속동결','온도, 시간','트레이에 담아 급속동결실에서 보관 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('내포장','중량확인 포장방법','알맹이를 중량에 맞게 담고 진공포장 (생굴·오만둥이·멍게는 용수를 넣어 밀봉포장) (중량 +10% 이내 오차허용)', { f: G3 }),
+      R('내포장','소비기한 (제조일자)','생굴·냉동굴(포장일) / 오만둥이·멍게 (소비기한: 제조일로부터 6일까지)', { date: true }),
+      R('금속검출','금속검출기','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('클립포장','포장방법','클립으로 이중포장'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동제품 -18℃ 이하 냉동보관 / 냉장제품 0~1℃ 냉장보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도: 냉동제품 -18℃ 이하 / 냉장제품 0~1℃'),
+    ]
+  },
+  scallop: {
+    label: '손질가리비 (173)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (0~10℃ 냉장보관)'),
+      R('세척 (CCP-1B)','세척방법 CCP모니터링','공정품을 세척수조에서 이물질 제거 / 세척횟수 2회 / 세척수량 350ℓ 이상 / 세척시간 20초 이상 / 세척수 교체주기 300kg 이내 / 1회 원물량 10kg 이내'),
+      R('선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 제거'),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('계량','중량확인','가리비살 무게에 맞춰 담기 (허용오차 50g 초과 100g 이하: 4.5g)', { f: G3 }),
+      R('내포장','포장방법','밀봉상태 확인'),
+      R('내포장','소비기한','제조일로부터 24개월까지 (냉동)', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','보관온도 -18℃ 이하 냉동보관'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  fish: {
+    label: '어류 — 참돔·가자미·조기 (174)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','20℃ 이하 해동실에서 15분 이내 해동'),
+      R('전처리','손질방법','비늘·내장 제거'),
+      R('세척','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('염지','염도, 시간','일정량의 천일염으로 60분간 염지 (반건조참돔 4% / 손질참조기 4% / 반건조물가자미 3%)', { f: [{ k:'salt', u:'%', label:'염도' }] }),
+      R('세척','세척방법','흐르는 물에 세척'),
+      R('수절','수절방법, 시간','발에 널어 1시간 가량 물빼기'),
+      R('반건조','건조방법, 시간','1시간 가량 강력팬을 돌려 건조'),
+      R('급속동결','온도, 시간','1미씩 대차발에 놓고 급속동결 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('계량','중량확인','원료별 정량 투입 확인 (200g 초과 300g 이하: 9g / 300g 초과 500g 이하: 3% 허용오차)', { f: G3 }),
+      R('내포장','진공포장','진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 12개월까지 (냉동) ※반건조자연산참돔·손질돔·손질참조기: 소비기한 24개월', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  boiled: {
+    label: '자숙제품 (175)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','해동방법','해동조에서 흐르는 물에 해동'),
+      R('손질 및 절단','손질방법','비가식부위 제거 및 알맞은 크기로 절단'),
+      R('세척/선별 (CCP-1B)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('자숙','자숙기 투입','온도 97~100℃, 스크루 속도 3 / 시간: 10~15분(자숙제품), 5~6분(데친 제품)',
+        { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'speed', u:'', label:'속도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('계량','중량확인','원료별 정량 투입 확인 (200g 초과 300g 이하: 9g / 300g 초과 500g 이하: 3% 허용오차)', { f: G3 }),
+      R('내포장','진공포장','진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 (      ) 까지', { date: true, yn: false }),
+      R('급속동결','온도, 시간','대차발에 놓고 급속동결 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동 -18℃ 이하 / 냉장 0~10℃', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 냉동 -18℃ 이하 / 냉장 0~10℃'),
+    ]
+  },
+  gejang: {
+    label: '절임류 게장 — 포장재검수 포함 (176)', approvers: ['담당','승인'],
+    rows: [
+      R('입고 검수','규격','원부재료 규격에 적합 (포장재 포함)'),
+      R('보관','보관 방법','원재료 보관 방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','유수해동: 20℃ 이하 15분 이내 흐르는 물로 해동 / 냉장해동: 10℃ 이하 24시간 이내 해동'),
+      R('절단','손질방법','비가식부위 제거'),
+      R('세척','세척방법','손질된 공정품을 세척수조에서 세척'),
+      R('소독 및 헹굼','CCP모니터링 (CCP-1BC)','차아염소산 농도 100~150ppm에서 5~6분간 소독 / 잔류하지 않도록 흐르는 물에 1회 30~45초 헹굼 / 소독수·헹굼수 교체주기 300kg 이내 (유리잔류염소 4ppm 이하)'),
+      R('계량 및 혼합','중량확인','비율함량에 맞게 혼합', { f: [{ k:'raw', u:'g', label:'원료' }, { k:'sauce', u:'g', label:'소스' }] }),
+      R('포장재 검수','포장재 육안검사','포장재 파손유무 등 부적합품 선별'),
+      R('트레이담기','중량확인','혼합이 끝난 제품을 교차오염이 되지 않도록 담음 (300g 초과 500g 이하: 3% / 1kg 초과 10kg 이하: 1.5% 허용오차)', { f: G3 }),
+      R('내포장','포장방법','밀봉상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 12개월까지 (냉동) ※곰곰 양념게장·간장게장(냉장) 소비기한: 제조일로부터 10일', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('완제품 검수','포장상태','포장재 파손유무'),
+      R('완제품 검수','포장상태','밀봉 상태'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동제품 -18℃ 이하 냉동보관 / 냉장제품 0~10℃ 냉장보관'),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','냉동제품 배송·유통온도 -18℃ 이하 / 냉장제품 0~10℃ 이하'),
+    ]
+  },
+  sunsal: {
+    label: '절임류 순살게장 (177)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','유수해동: 20℃ 이하 15분 이내 흐르는 물로 해동 / 냉장해동: 10℃ 이하 24시간 이내 해동'),
+      R('절단','손질방법','등껍질·아가미 및 모래주머니 제거 후 2절 또는 4절'),
+      R('세척','세척방법','절단된 공정품을 세척수조에서 세척'),
+      R('소독 및 헹굼','CCP모니터링 (CCP-1BC)','차아염소산 농도 100ppm±5ppm에서 5분간 소독 / 잔류하지 않도록 흐르는 물에 2~3번 헹굼 (잔류염소 0.5ppm 이하)'),
+      R('채육','채육방법','채육기에 넣어 게살만 채육'),
+      R('계량 및 혼합','중량확인','게 순살과 소스의 비율을 함량에 맞게 혼합', { f: [{ k:'crab', u:'g', label:'꽃게' }, { k:'sauce', u:'g', label:'소스' }] }),
+      R('트레이담기','중량확인','혼합이 끝난 제품을 교차오염이 되지 않도록 담음 (50g 초과 100g 이하: 4.5g / 300g 초과 500g 이하: 3% / 1kg 초과 10kg 이하: 1.5% 허용오차)', { f: G3 }),
+      R('내포장 (컵실러기)','컵실러 포장','밀봉상태 확인'),
+      R('내포장','소비기한','제조일로부터 12개월까지 (냉동) ※속이꽉찬양념게장·간장게장(냉장) 소비기한: 제조일로부터 20일', { date: true }),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','보관온도 -18℃ 이하 냉동보관'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  crab_cut: {
+    label: '한치·절단꽃게 (178)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','20℃ 이하 해동실에서 흐르는 물에 원료의 형태를 그대로 보존하면서 해동'),
+      R('선별','선별방법','외관이 불량하거나 선도 떨어지는 원료 및 이물질 제거'),
+      R('전처리','손질방법','비가식부위를 제거 (절단꽃게·손질꽃게는 2절 또는 4절)'),
+      R('세척','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('계량','중량확인','원료별 정량 투입 확인 (100g 초과 200g 이하: 4.5% / 300g 초과 500g 이하: 3% / 500g 초과 1kg 이하: 15g 허용오차)',
+        { f: [{ k:'w1', u:'g' }, { k:'w2', u:'g' }, { k:'w3', u:'g' },
+              { k:'p1', u:'토막' }, { k:'p2', u:'토막' }, { k:'p3', u:'토막' }] }),
+      R('내포장','포장방법','밀봉 상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true, yn: false }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('급속동결','온도, 시간','계량한 반제품을 트레이에 담아 급속동결실에서 보관 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  // MF 산지직송 — 생굴·오만둥이 제조방법설명서 기준 (세척만 하여 냉장 출고)
+  mf_live: {
+    label: 'MF 산지직송 — 활·생물 세척 냉장출고', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (선도·외관 확인, 활 제품은 생존 상태 확인, 냉장 0~10℃ 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (0~10℃ 냉장보관, 활 제품은 동결 금지)', { f: [{ k:'temp', u:'℃' }] }),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료, 폐사 개체 및 이물질 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척 (펄·모래·오물 제거)'),
+      R('2차 선별','선별방법','외관 불량·폐사 개체 및 패각 파편·족사·이물질 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 흐르는 물로 세척'),
+      R('계량 및 내포장','중량확인','표시중량 이상 담음 (계량 확인)', { f: G3 }),
+      R('계량 및 내포장','포장방법','밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량, 아이스팩 투입 (활 제품은 직접 닿지 않게)'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('출고','온도','배송·유통온도 냉장 0~10℃'),
+    ]
+  },
+  // MF 산지직송 — 제품명에 "손질": 비가식부위 손질 후 세척하여 냉장 출고 (백조기 174 기록·손질갑오징어 제조방법설명서 기준)
+  mf_trim: {
+    label: 'MF 산지직송 — 손질 제품 냉장출고', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (선도·외관 확인, 냉장 0~10℃ 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (냉장 0~10℃ / 해동 제품 원료는 -18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('해동','온도, 시간','해동 제품만: 20℃ 이하 흐르는 물에 원료의 형태를 그대로 보존하면서 해동 (해당 없으면 −)'),
+      R('선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질 제거'),
+      R('손질','손질방법','비가식부위 제거 (어류: 비늘·내장·아가미·지느러미 / 오징어·갑오징어: 내장·먹물·갑)'),
+      R('세척 (2회)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('세척 (2회)','손질 상태 확인','세척 후 잔여 내장·혈합육·비늘·먹물 잔존 여부 육안 확인 (잔존 시 재손질 후 재세척)'),
+      R('계량 및 내포장','중량확인','표시중량 이상 담음 (계량 확인)', { f: G3 }),
+      R('계량 및 내포장','포장방법','밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인 · 해동 제품은 "해동품" 표시', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량, 아이스팩 투입'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('출고','온도','배송·유통온도 냉장 0~10℃'),
+    ]
+  },
+};
+
+// ── 출고 제품 품온 확인 (각 제품군 마지막 행으로 추가 — 기존 행 id는 그대로 유지) ──
+const PRODUCT_TEMP_STD = {
+  shrimp:   '냉장 0~5℃',
+  oyster:   '냉동제품 -18℃ 이하 / 냉장제품 0~5℃',
+  scallop:  '냉동 -18℃ 이하',
+  fish:     '냉동 -18℃ 이하',
+  boiled:   '냉동 -18℃ 이하 / 냉장 0~5℃',
+  gejang:   '냉동제품 -18℃ 이하 / 냉장제품 0~5℃',
+  sunsal:   '냉동 -18℃ 이하',
+  crab_cut: '냉동 -18℃ 이하',
+  mf_live:  '냉장 0~5℃ (활 제품은 얼지 않을 것)',
+  mf_trim:  '냉장 0~5℃',
+};
+Object.entries(PRODUCTS).forEach(([k, p]) => {
+  p.rows.push(R('출고', '제품 품온', `출고 전 제품 품온 측정: ${PRODUCT_TEMP_STD[k]}`,
+    { f: [{ k: 'temp', u: '℃', label: '품온' }] }));
+});
+
+// 행마다 고유 id 부여 (p1, p2, ...)
+Object.values(PRODUCTS).forEach(p => p.rows.forEach((r, i) => { r.id = 'p' + (i + 1); }));
+
+let currentProduct = 'shrimp';
+
+// ── 생산일보(쿠팡 수불대장)에서 불러오기 ───────────────────
+// 품목·LOT·생산수량·원료 LOT만 채움. 적/부·측정값은 점검자가 실제 점검 후 입력.
+const LEDGER_URL = 'https://widfresh-erplot-default-rtdb.asia-southeast1.firebasedatabase.app';
+let LEDGER_OUT = null;    // 일보 전체 (한 번만 받음)
+let LEDGER_DAY = null;    // 선택한 날짜의 제품군별 묶음
+let LEDGER_PICK = null;   // 지금 양식에 채운 제품군 → 저장 시 함께 기록
+
+// 제품명 → 양식. 단순 상품(가공 없음)은 'skip', 판단이 어려운 품목은 null(직접 선택)
+const LEDGER_CODE_GROUP = { 'P-206': 'skip', 'P-548': 'skip', 'P-608': null };
+function ledgerGroup(o) {
+  const n = o.pname || '';
+  if (o.code in LEDGER_CODE_GROUP) return LEDGER_CODE_GROUP[o.code];
+  if (o.ch === 'MF') return /손질/.test(n) ? 'mf_trim' : 'mf_live';
+  if (/순살.*게장/.test(n)) return 'sunsal';
+  if (/게장/.test(n)) return 'gejang';
+  if (/데친|자숙|숙회/.test(n)) return 'boiled';
+  if (/굴|오만둥이|멍게/.test(n)) return 'oyster';
+  if (/가리비/.test(n)) return 'scallop';
+  if (/새우젓/.test(n)) return 'shrimp';
+  if (/조기|참돔|가자미|고등어|황돔/.test(n)) return 'fish';
+  if (/오징어|꽃게|금게|한치/.test(n)) return 'crab_cut';
+  return null;
+}
+const lgShort = n => String(n || '').replace(/^위드프레쉬\s*(산지직송\s*)?/, '').replace(/\s*1개$/, '').trim();
+const lgEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+function clearLedger() { LEDGER_DAY = null; LEDGER_PICK = null; document.getElementById('ledger-box').innerHTML = ''; }
+
+async function loadLedgerDay() {
+  const date = document.getElementById('date').value;
+  const box = document.getElementById('ledger-box');
+  if (!date) { showToast('점검일자를 먼저 선택하세요.', 'error'); return; }
+  const btn = document.getElementById('btn-ledger');
+  btn.disabled = true; box.innerHTML = '<div class="lg-msg">생산일보 불러오는 중...</div>';
+  try {
+    if (!LEDGER_OUT) {
+      const r = await fetch(`${LEDGER_URL}/쿠팡수불/out.json`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      LEDGER_OUT = (Array.isArray(d) ? d : Object.values(d || {})).filter(Boolean);
+    }
+    const rows = LEDGER_OUT.filter(o => o.date === date);
+    if (!rows.length) { box.innerHTML = `<div class="lg-msg err">${date} 생산일보에 생산내역이 없습니다.</div>`; return; }
+
+    const G = new Map();
+    rows.forEach(o => {
+      const g = ledgerGroup(o); if (g === 'skip') return;
+      const k = g || '?';
+      const x = G.get(k) || { group: g, items: new Map(), raws: new Set(), qty: 0, chs: new Set() };
+      const ik = o.code + '|' + o.lot;
+      const it = x.items.get(ik) || { code: o.code || '', name: lgShort(o.pname), lot: o.lot || '', qty: 0, ch: o.ch, thaw: /해동/.test((o.pname || '') + (o.memo || '')) };
+      it.qty += Number(o.qty) || 0; x.items.set(ik, it);
+      (Array.isArray(o.raws) ? o.raws : Object.values(o.raws || {})).forEach(r => { if (r && r.lot && !r.sauce) String(r.lot).split(',').forEach(l => x.raws.add(l.trim())); });
+      x.qty += Number(o.qty) || 0; x.chs.add(o.ch);
+      G.set(k, x);
+    });
+    // 이미 작성된 공정관리 일지 수
+    let written = {};
+    try {
+      const [y, m] = date.split('-');
+      const logs = await fetch(`${FIREBASE_URL}/process_logs/${y}/${m}.json`).then(r => r.json());
+      Object.values(logs || {}).forEach(l => { if (l && l.meta && l.meta.date === date) written[l.meta.product] = (written[l.meta.product] || 0) + 1; });
+    } catch (e) { /* 조회 실패해도 불러오기는 계속 */ }
+
+    LEDGER_DAY = { date, groups: [...G.values()] };
+    const order = Object.keys(PRODUCTS);
+    LEDGER_DAY.groups.sort((a, b) => (a.group ? order.indexOf(a.group) : 99) - (b.group ? order.indexOf(b.group) : 99));
+    box.innerHTML = `<div class="lg-msg">${date} 생산 제품군 ${LEDGER_DAY.groups.length}개 — 작성할 제품군을 누르세요.</div>
+      <div class="lg-chips">${LEDGER_DAY.groups.map((g, i) => {
+        const items = [...g.items.values()].sort((a, b) => b.qty - a.qty);
+        const w = g.group ? written[g.group] || 0 : 0;
+        return `<button type="button" class="lg-chip" id="lgc-${i}" onclick="applyLedger(${i})">
+          <span class="t"><b>${g.group ? lgEsc(PRODUCTS[g.group].label) : '양식 직접 선택 필요'}</b>
+          <small>${lgEsc(items.slice(0, 3).map(it => it.name).join(' · '))}${items.length > 3 ? ` 외 ${items.length - 3}` : ''} · ${g.qty.toLocaleString()}개</small></span>
+          <span class="lg-st ${w ? 'done' : 'miss'}">${w ? `작성 ${w}건` : '미작성'}</span></button>`;
+      }).join('')}</div><div id="ledger-detail"></div>`;
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = '<div class="lg-msg err">생산일보를 불러오지 못했습니다 — 인터넷 연결을 확인하세요.</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function applyLedger(i) {
+  const g = LEDGER_DAY && LEDGER_DAY.groups[i]; if (!g) return;
+  document.querySelectorAll('.lg-chip').forEach((el, k) => el.classList.toggle('on', k === i));
+  if (g.group) {
+    document.getElementById('product').value = g.group;
+    currentProduct = g.group;
+    renderTable();
+  }
+  const items = [...g.items.values()].sort((a, b) => b.qty - a.qty);
+  const names = items.map(it => it.name);
+  document.getElementById('product_name').value = names.slice(0, 2).join(' / ') + (names.length > 2 ? ` 외 ${names.length - 2}` : '');
+  document.getElementById('round1_label').value = names[0] || '';
+  document.getElementById('round2_label').value = names.slice(1).join(', ');
+  syncRoundTitles();
+  LEDGER_PICK = {
+    date: LEDGER_DAY.date, source: '생산·물류일보(쿠팡 수불대장)',
+    items: items.map(it => ({ code: it.code, name: it.name, lot: it.lot, qty: it.qty, ch: it.ch, thaw: it.thaw })),
+    raw_lots: [...g.raws].sort(),
+  };
+  document.getElementById('ledger-detail').innerHTML = `<div class="lg-detail"><table>
+      <thead><tr><th>제품</th><th>LOT</th><th>수량</th><th>채널</th></tr></thead>
+      <tbody>${items.map(it => `<tr><td>${lgEsc(it.name)}${it.thaw && !/해동/.test(it.name) ? ' (해동)' : ''}</td><td>${lgEsc(it.lot)}</td><td class="n">${it.qty.toLocaleString()}</td><td>${lgEsc(it.ch)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    ${LEDGER_PICK.raw_lots.length ? `<div class="lg-msg">원료 LOT: ${lgEsc(LEDGER_PICK.raw_lots.join(', '))}</div>` : ''}
+    <div class="lg-note">${g.group ? '' : '⚠ 이 품목은 제품군을 자동으로 정하지 못했습니다. 위 "제품군"에서 양식을 직접 고르세요.<br>'}제품명·점검결과 구분(①②)·LOT만 채웠습니다. 적/부와 온도·중량 등은 실제 점검 후 입력하세요. 점검 시각은 ①② 칸에 직접 덧붙이세요.</div>`;
+  document.getElementById('ledger-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── 사진 첨부 공통 ────────────────────────────────────────
+const MAX_PHOTOS = 4;
+const PHOTOS = {};
+
+function compressImage(file, maxSide, quality) {
+  maxSide = maxSide || 900; quality = quality || 0.62;
+  return new Promise((resolve, reject) => {
+    if (!file.type || file.type.indexOf('image/') !== 0) { reject(new Error('not an image')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read fail'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode fail'));
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = quality, url = c.toDataURL('image/jpeg', q);
+        while (url.length > 900 * 1024 && q > 0.35) { q -= 0.12; url = c.toDataURL('image/jpeg', q); }
+        resolve(url);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addPhotos(input, key) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  PHOTOS[key] = PHOTOS[key] || [];
+  let skipped = 0;
+  for (const f of files) {
+    if (PHOTOS[key].length >= MAX_PHOTOS) { skipped++; continue; }
+    try { PHOTOS[key].push(await compressImage(f)); }
+    catch (e) { console.warn(e); showToast('이미지를 불러오지 못했습니다.', 'error'); }
+  }
+  if (skipped) showToast(`사진은 최대 ${MAX_PHOTOS}장까지 첨부됩니다.`, 'error');
+  renderPhotos(key);
+}
+
+function removePhoto(key, idx) {
+  if (!PHOTOS[key]) return;
+  PHOTOS[key].splice(idx, 1);
+  renderPhotos(key);
+}
+
+function renderPhotos(key) {
+  const list = PHOTOS[key] || [];
+  const grid = document.getElementById('grid-' + key);
+  const cnt = document.getElementById('cnt-' + key);
+  if (cnt) cnt.textContent = `${list.length} / ${MAX_PHOTOS}장`;
+  if (!grid) return;
+  if (!list.length) { grid.className = ''; grid.innerHTML = '<div class="photo-empty">첨부된 사진이 없습니다</div>'; return; }
+  grid.className = 'photo-grid';
+  grid.innerHTML = list.map((src, i) => `
+    <div class="photo-thumb">
+      <img src="${src}" alt="첨부 ${i + 1}">
+      <button type="button" class="photo-del" onclick="removePhoto('${key}',${i})" aria-label="삭제">✕</button>
+    </div>`).join('');
+}
+
+// ── 초기화 ────────────────────────────────────────────────
+(function initDate() {
+  const q = new URLSearchParams(location.search).get('date');   // process_log.html?date=2026-10-20
+  document.getElementById('date').value = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : todayStr();
+})();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+(function initProductSelect() {
+  const sel = document.getElementById('product');
+  sel.innerHTML = Object.entries(PRODUCTS).map(([k, p]) => `<option value="${k}">${p.label}</option>`).join('');
+  sel.value = currentProduct;
+})();
+
+function onProductChange() {
+  currentProduct = document.getElementById('product').value;
+  renderTable();
+}
+
+function renderApproveLine() {
+  const p = PRODUCTS[currentProduct];
+  document.getElementById('approve-line').innerHTML =
+    `결재란 구성: <b>${p.approvers.join(' · ')}</b> (실물 양식 기준)`;
+}
+
+// ── 기록칸 렌더링 ─────────────────────────────────────────
+function recordCell(row, round) {
+  let html = '';
+  if (row.date) {
+    html += `<input class="rec-date" type="date" id="${row.id}_${round}_date">`;
+  }
+  if (row.f && row.f.length) {
+    html += '<div class="rec-fields">' + row.f.map(f => `
+      <div class="rec-f-row">
+        ${f.label ? `<span class="f-label">${f.label}</span>` : ''}
+        <input class="num-input" type="number" step="0.1" inputmode="decimal" id="${row.id}_${round}_${f.k}" placeholder="—">
+        ${f.u ? `<span class="f-unit">${f.u}</span>` : ''}
+      </div>`).join('') + '</div>';
+  }
+  if (row.yn) {
+    html += `<div class="yn-btns">
+      <button type="button" class="yn-btn yes" id="yes-${row.id}-${round}" onclick="setYN('${row.id}','${round}',true)">적</button>
+      <button type="button" class="yn-btn no"  id="no-${row.id}-${round}"  onclick="setYN('${row.id}','${round}',false)">부</button>
+    </div>`;
+  }
+  return html || '<div style="font-size:11px;color:#bbb;text-align:center;">—</div>';
+}
+
+// ── 공정 항목 카드 렌더링 ─────────────────────────────────
+function renderTable() {
+  const p = PRODUCTS[currentProduct];
+  document.getElementById('proc-list').innerHTML = p.rows.map(row => `
+    <div class="proc-item" id="row-${row.id}">
+      <div class="proc-head">
+        <span class="proc-name">${row.proc}</span>
+        <span class="proc-cat">${row.item}</span>
+      </div>
+      <div class="proc-std">${row.std}</div>
+      <div class="proc-rounds">
+        <div class="round-col">
+          <div class="round-title" id="rt1-${row.id}">①</div>
+          ${recordCell(row, 'r1')}
+        </div>
+        <div class="round-col">
+          <div class="round-title" id="rt2-${row.id}">②</div>
+          ${recordCell(row, 'r2')}
+        </div>
+      </div>
+      ${row.yn ? `<div class="proc-action" id="action-row-${row.id}">
+        <label>⚠ 부적합 조치사항</label>
+        <textarea id="action-${row.id}" placeholder="조치 내용을 입력하세요"></textarea>
+      </div>` : ''}
+    </div>`).join('');
+
+  renderApproveLine();
+  syncRoundTitles();
+}
+
+// 회차 라벨(오전/오후 등)을 각 항목 제목에 반영
+function syncRoundTitles() {
+  const l1 = document.getElementById('round1_label').value.trim();
+  const l2 = document.getElementById('round2_label').value.trim();
+  PRODUCTS[currentProduct].rows.forEach(row => {
+    const t1 = document.getElementById(`rt1-${row.id}`);
+    const t2 = document.getElementById(`rt2-${row.id}`);
+    if (t1) t1.textContent = l1 ? `① ${l1}` : '①';
+    if (t2) t2.textContent = l2 ? `② ${l2}` : '②';
+  });
+}
+
+// ── 적/부 선택 ────────────────────────────────────────────
+function setYN(id, round, val) {
+  const yes = document.getElementById(`yes-${id}-${round}`);
+  const no = document.getElementById(`no-${id}-${round}`);
+  // 같은 버튼 재클릭 시 선택 해제 (해당없음 "-" 처리)
+  const already = val ? yes.classList.contains('active') : no.classList.contains('active');
+  yes.classList.remove('active'); no.classList.remove('active');
+  if (!already) (val ? yes : no).classList.add('active');
+  refreshAlert(id);
+}
+
+function refreshAlert(id) {
+  const bad = ['r1', 'r2'].some(r => {
+    const el = document.getElementById(`no-${id}-${r}`);
+    return el && el.classList.contains('active');
+  });
+  const row = document.getElementById(`row-${id}`);
+  const action = document.getElementById(`action-row-${id}`);
+  if (row) row.classList.toggle('has-alert', bad);
+  if (action) action.classList.toggle('visible', bad);
+}
+
+function getYN(id, round) {
+  const yes = document.getElementById(`yes-${id}-${round}`);
+  const no = document.getElementById(`no-${id}-${round}`);
+  if (yes && yes.classList.contains('active')) return true;
+  if (no && no.classList.contains('active')) return false;
+  return null;
+}
+
+function numVal(elId) {
+  const el = document.getElementById(elId);
+  if (!el || el.value === '') return null;
+  const n = parseFloat(el.value);
+  return isNaN(n) ? null : n;
+}
+
+// ── Firebase 저장 ─────────────────────────────────────────
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+  const productName = document.getElementById('product_name').value.trim();
+
+  if (!date) { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!productName) { showToast('제품명을 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('확인자를 선택하세요.', 'error'); return; }
+
+  const p = PRODUCTS[currentProduct];
+  // 점검결과가 하나도 없는 일지는 저장하지 않음 (품목만 불러온 빈 일지 방지)
+  if (!p.rows.some(row => row.yn && (getYN(row.id, 'r1') !== null || getYN(row.id, 'r2') !== null))) {
+    showToast('점검결과(적/부)를 입력한 뒤 저장하세요.', 'error'); return;
+  }
+  const checks = {};
+  let hasAlert = false;
+
+  p.rows.forEach(row => {
+    const entry = { proc: row.proc, item: row.item, std: row.std };
+    ['r1', 'r2'].forEach(round => {
+      const r = { value: row.yn ? getYN(row.id, round) : null };
+      if (row.date) {
+        const el = document.getElementById(`${row.id}_${round}_date`);
+        r.date = el && el.value ? el.value : null;
+      }
+      if (row.f) row.f.forEach(f => { r[f.k] = numVal(`${row.id}_${round}_${f.k}`); });
+      if (r.value === false) hasAlert = true;
+      entry[round] = r;
+    });
+    const actionEl = document.getElementById(`action-${row.id}`);
+    entry.action = actionEl ? actionEl.value.trim() : '';
+    checks[row.id] = entry;
+  });
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      product: currentProduct,
+      product_label: p.label,
+      product_name: productName,
+      approvers: p.approvers,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    round_labels: {
+      r1: document.getElementById('round1_label').value.trim(),
+      r2: document.getElementById('round2_label').value.trim()
+    },
+    checks,
+    photos: { stamp: PHOTOS.stamp || [] },
+    note: document.getElementById('note').value.trim(),
+    confirm_note: document.getElementById('confirm_note').value.trim(),
+    has_alert: hasAlert
+  };
+  // 생산일보에서 불러온 품목·LOT (같은 날짜일 때만)
+  if (LEDGER_PICK && LEDGER_PICK.date === date) payload.ledger = LEDGER_PICK;
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/process_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const photoCnt = (PHOTOS.stamp || []).length;
+    showToast(`저장 완료! ✓${photoCnt ? `  (날인사진 ${photoCnt}장 포함)` : ''}`, 'success');
+    setTimeout(() => location.reload(), 2200);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+
+// ── 실행 ──────────────────────────────────────────────────
+renderTable();
+renderPhotos('stamp');
+</script>
+</body>
+</html>

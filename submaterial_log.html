@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>부자재 육안검사 일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 600px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+    .qty-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+
+    .chk-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #f0f0f0; }
+    .chk-row:last-child { border-bottom: none; }
+    .chk-label { font-size: 13px; color: #333; line-height: 1.4; }
+    .chk-label small { display: block; font-size: 11px; color: #999; margin-top: 2px; }
+    .ox-btns { display: flex; gap: 4px; }
+    .ox-btn { width: 46px; padding: 8px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 12.5px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .ox-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .ox-btn.ng.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .result-btns { display: flex; gap: 8px; }
+    .res-btn { flex: 1; padding: 14px 4px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; background: #fff; font-family: inherit; color: #888; }
+    .res-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .res-btn.ng.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .alert-section { display: none; }
+    .alert-section.visible { display: block; }
+    .alert-section textarea { width: 100%; padding: 10px; border: 1.5px solid #ffcdd2; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; background: #fff8f8; }
+    .alert-section textarea:focus { border-color: #c62828; outline: none; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 9pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>부자재 육안검사 일지</h1>
+    <p>㈜위드프레쉬 · 입고 건별 작성</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 입고정보</div>
+    <div class="info-grid">
+      <div class="field"><label>입고일자</label><input type="date" id="date"></div>
+      <div class="field"><label>입고시각</label><input type="time" id="time"></div>
+      <div class="field full"><label>품명</label><input type="text" id="item_name" placeholder="예) 진공 파우치 20×30"></div>
+      <div class="field full"><label>반입처</label><input type="text" id="supplier" placeholder="예) ○○포장"></div>
+      <div class="field full">
+        <label>수량</label>
+        <div class="qty-row">
+          <input type="number" step="0.1" min="0" inputmode="decimal" id="qty_value" placeholder="수량 입력">
+          <select id="qty_unit">
+            <option value="박스" selected>박스</option>
+            <option value="개">개</option>
+            <option value="롤">롤</option>
+            <option value="kg">kg</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>점검자</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field"><label>승인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 육안검사 항목</div>
+    <div id="check-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 결과 (종합판정)</div>
+    <div class="result-btns">
+      <button type="button" class="res-btn ok" id="res_ok" onclick="setResult('ok')">적 합</button>
+      <button type="button" class="res-btn ng" id="res_ng" onclick="setResult('ng')">부적합</button>
+    </div>
+  </div>
+
+  <div class="card alert-section" id="alert-section">
+    <div class="section-title">■ 부적합사항 및 개선조치</div>
+    <div class="field full" style="margin-bottom:10px;">
+      <label>부적합사항</label>
+      <textarea id="defect_note" placeholder="부적합 내용을 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ffcdd2;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;background:#fff8f8;"></textarea>
+    </div>
+    <div class="field full">
+      <label>개선조치</label>
+      <textarea id="action_note" placeholder="개선조치 내용을 입력하세요"></textarea>
+    </div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// ── 검사항목 (실물 "부자재 육안검사 일지" 양식 순서와 동일) ──
+const CHECKS = [
+  { id: 'vehicle_clean', label: '차량청결 상태' },
+  { id: 'outer_pack',    label: '외포장 상태' },
+  { id: 'appearance',    label: '겉모양' },
+  { id: 'spec_label',    label: '규격 및 표기사항' },
+  { id: 'inner_pack',    label: '소포장 상태' },
+];
+
+document.getElementById('date').value = todayStr();
+document.getElementById('time').value = nowTimeStr();
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function nowTimeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function renderChecks() {
+  document.getElementById('check-list').innerHTML = CHECKS.map(c => `
+    <div class="chk-row">
+      <div class="chk-label">${c.label}</div>
+      <div class="ox-btns">
+        <button type="button" class="ox-btn ok" id="ok-${c.id}" onclick="setOX('${c.id}','ok')">적</button>
+        <button type="button" class="ox-btn ng" id="ng-${c.id}" onclick="setOX('${c.id}','ng')">부</button>
+      </div>
+    </div>`).join('');
+}
+
+function setOX(id, state) {
+  ['ok', 'ng'].forEach(s => {
+    document.getElementById(`${s}-${id}`).classList.toggle('active', s === state);
+  });
+  if (state === 'ng') setResult('ng');
+}
+
+function getOX(id) {
+  if (document.getElementById(`ok-${id}`).classList.contains('active')) return 'ok';
+  if (document.getElementById(`ng-${id}`).classList.contains('active')) return 'ng';
+  return null;
+}
+
+function setResult(state) {
+  document.getElementById('res_ok').classList.toggle('active', state === 'ok');
+  document.getElementById('res_ng').classList.toggle('active', state === 'ng');
+  document.getElementById('alert-section').classList.toggle('visible', state === 'ng');
+}
+
+function getResult() {
+  if (document.getElementById('res_ok').classList.contains('active')) return 'ok';
+  if (document.getElementById('res_ng').classList.contains('active')) return 'ng';
+  return null;
+}
+
+function numVal(id) {
+  const el = document.getElementById(id);
+  if (!el || el.value === '') return null;
+  const n = parseFloat(el.value);
+  return isNaN(n) ? null : n;
+}
+
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const itemName = document.getElementById('item_name').value.trim();
+  const supplier = document.getElementById('supplier').value.trim();
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+  const result = getResult();
+
+  if (!date) { showToast('입고일자를 입력하세요.', 'error'); return; }
+  if (!itemName) { showToast('품명을 입력하세요.', 'error'); return; }
+  if (!supplier) { showToast('반입처를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('승인자를 선택하세요.', 'error'); return; }
+  if (!result) { showToast('결과(적합/부적합)를 선택하세요.', 'error'); return; }
+
+  const checks = {};
+  CHECKS.forEach(c => { checks[c.id] = { label: c.label, value: getOX(c.id) }; });
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      time: document.getElementById('time').value,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    item_name: itemName,
+    supplier,
+    qty_value: numVal('qty_value'),
+    qty_unit: document.getElementById('qty_unit').value,
+    checks,
+    result,
+    defect_note: result === 'ng' ? document.getElementById('defect_note').value.trim() : '',
+    action_note: result === 'ng' ? document.getElementById('action_note').value.trim() : '',
+    has_alert: result === 'ng'
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/submaterial_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+renderChecks();
+setResult('ok');
+</script>
+</body>
+</html>

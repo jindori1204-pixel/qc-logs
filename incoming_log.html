@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>원재료 육안검사 일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+
+    .container { max-width: 620px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+
+    /* 기본정보 */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { display: flex; flex-direction: column; }
+    .field label { font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 14px; font-family: inherit;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    /* 입고량 */
+    .qty-row { display: flex; gap: 8px; }
+    .qty-row input { flex: 2; }
+    .qty-row select { flex: 1; }
+
+    /* 점검 체크리스트 */
+    .check-section { margin-bottom: 0; }
+    .check-list { border: 1.5px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .check-item { padding: 11px 12px; border-bottom: 1px solid #f0f0f0; }
+    .check-item:last-child { border-bottom: none; }
+    .check-item.has-alert { background: #fff8f8; }
+
+    .check-row { display: flex; align-items: center; gap: 10px; }
+    .check-label { flex: 1; font-size: 13px; color: #333; line-height: 1.4; }
+    .check-sub { font-size: 11px; color: #888; }
+
+    .pa-btns { display: flex; gap: 5px; flex-shrink: 0; }
+    .pa-btn { width: 52px; padding: 8px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #888; }
+    .pa-btn.pass.active  { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .pa-btn.fail.active  { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    /* 온도 입력 */
+    .temp-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .temp-label { font-size: 12px; color: #555; white-space: nowrap; }
+    .temp-input { width: 80px; padding: 8px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; font-family: inherit; -moz-appearance: textfield; }
+    .temp-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .temp-input:focus { border-color: #1a3a5c; outline: none; }
+    .temp-unit { font-size: 12px; color: #888; }
+
+    /* 부적합 조치 */
+    .alert-input { margin-top: 8px; }
+    .alert-input label { font-size: 11px; color: #c62828; display: block; margin-bottom: 3px; }
+    .alert-input textarea { width: 100%; padding: 8px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 50px; background: #fff8f8; }
+
+    /* 적합여부 배너 */
+    .result-banner { padding: 12px 16px; border-radius: 8px; font-size: 15px; font-weight: bold; text-align: center; margin-top: 4px; background: #e8f5e9; color: #2e7d32; border: 2px solid #2e7d32; transition: all .2s; }
+    .result-banner.fail { background: #ffebee; color: #c62828; border-color: #c62828; }
+
+    /* 저장 버튼 */
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 9pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>원재료 육안검사 일지</h1>
+    <p>㈜위드프레쉬</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 입고 기본정보</div>
+    <div class="info-grid">
+      <div class="field full">
+        <label>입고일자</label>
+        <input type="date" id="date">
+      </div>
+      <div class="field full">
+        <label>품명</label>
+        <input type="text" id="product_name" placeholder="예) 참돔, 갑오징어 3단, 민어 등">
+      </div>
+      <div class="field full">
+        <label>구입처명</label>
+        <input type="text" id="supplier" placeholder="예) 통영어판장 B판">
+      </div>
+      <div class="field full">
+        <label>소비기한 / 제조년월일 / 품질유지기한</label>
+        <input type="date" id="expiry_date">
+      </div>
+      <div class="field full">
+        <label>입고량</label>
+        <div class="qty-row">
+          <input type="number" id="qty_value" placeholder="0" step="0.1">
+          <select id="qty_unit">
+            <option value="C/S">C/S</option>
+            <option value="kg">kg</option>
+            <option value="마리">마리</option>
+            <option value="box">box</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>작성자</label>
+        <select id="inspector">
+          <option value="">선택</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>확인자</label>
+        <select id="confirmer">
+          <option value="">선택</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 점검항목 -->
+  <div class="card">
+    <div class="section-title">■ 육안검사 항목</div>
+    <div class="check-list" id="check-list"></div>
+  </div>
+
+  <!-- 적합여부 -->
+  <div class="card">
+    <div class="section-title">■ 종합 적합여부</div>
+    <div class="result-banner" id="result-banner">✔ 적합</div>
+  </div>
+
+  <!-- 부적합 조치 (부적합 시 표시) -->
+  <div class="card" id="action-card" style="display:none">
+    <div class="section-title">■ 부적합 시 조치 내용</div>
+    <textarea id="action_note" placeholder="부적합 사유 및 조치 내용을 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ffcdd2;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;background:#fff8f8;"></textarea>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+// ── 점검항목 데이터 ──────────────────────────────────
+const CHECK_ITEMS = [
+  { id: 'vehicle_state', label: '차량상태', sub: '운반차량 청결·위생 상태' },
+  { id: 'vehicle_temp',  label: '차량온도', sub: '냉동·냉장 운반온도 적합 여부', hasTemp: true, tempLabel: '측정 온도', unit: '℃' },
+  { id: 'packaging',     label: '포장상태', sub: '포장 파손·오염 여부' },
+  { id: 'appearance',    label: '성상 — 외관', sub: '원료 외관 이상 여부' },
+  { id: 'color',         label: '성상 — 색상', sub: '원료 색상 이상 여부' },
+  { id: 'smell',         label: '성상 — 냄새', sub: '원료 이취·악취 여부' },
+  { id: 'foreign',       label: '이물혼입', sub: '이물질 혼입 여부' },
+  { id: 'label',         label: '표시기준', sub: '알러지 유발 물질 포함 여부 표시 확인' },
+];
+
+// ── 렌더링 ──────────────────────────────────────────
+function renderChecklist() {
+  const container = document.getElementById('check-list');
+  CHECK_ITEMS.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.id = `item-${item.id}`;
+
+    const tempHtml = item.hasTemp ? `
+      <div class="temp-row">
+        <span class="temp-label">${item.tempLabel}:</span>
+        <input class="temp-input" type="number" step="0.1" id="temp-${item.id}" placeholder="0">
+        <span class="temp-unit">${item.unit}</span>
+      </div>` : '';
+
+    div.innerHTML = `
+      <div class="check-row">
+        <div class="check-label">
+          ${item.label}
+          ${item.sub ? `<div class="check-sub">${item.sub}</div>` : ''}
+        </div>
+        <div class="pa-btns">
+          <button class="pa-btn pass" id="pass-${item.id}" onclick="setPA('${item.id}', true)">적합</button>
+          <button class="pa-btn fail" id="fail-${item.id}" onclick="setPA('${item.id}', false)">부적합</button>
+        </div>
+      </div>
+      ${tempHtml}
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ── 적합/부적합 선택 ────────────────────────────────
+function setPA(id, isPass) {
+  document.getElementById(`pass-${id}`).classList.toggle('active', isPass);
+  document.getElementById(`fail-${id}`).classList.toggle('active', !isPass);
+  document.getElementById(`item-${id}`).classList.toggle('has-alert', !isPass);
+  updateOverallResult();
+}
+
+function updateOverallResult() {
+  const anyFail = CHECK_ITEMS.some(item => {
+    const failBtn = document.getElementById(`fail-${item.id}`);
+    return failBtn && failBtn.classList.contains('active');
+  });
+  const banner = document.getElementById('result-banner');
+  const actionCard = document.getElementById('action-card');
+  if (anyFail) {
+    banner.textContent = '✗ 부적합';
+    banner.className = 'result-banner fail';
+    actionCard.style.display = 'block';
+  } else {
+    banner.textContent = '✔ 적합';
+    banner.className = 'result-banner';
+    actionCard.style.display = 'none';
+  }
+}
+
+// ── Firebase 저장 ────────────────────────────────────
+async function saveRecord() {
+  const date      = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+  const product   = document.getElementById('product_name').value.trim();
+  const supplier  = document.getElementById('supplier').value.trim();
+
+  if (!date)      { showToast('입고일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('작성자를 선택하세요.', 'error'); return; }
+  if (!product)   { showToast('품명을 입력하세요.', 'error'); return; }
+
+  const checks = {};
+  CHECK_ITEMS.forEach(item => {
+    const passBtn = document.getElementById(`pass-${item.id}`);
+    const failBtn = document.getElementById(`fail-${item.id}`);
+    let value = null;
+    if (passBtn && passBtn.classList.contains('active')) value = true;
+    if (failBtn && failBtn.classList.contains('active')) value = false;
+    checks[item.id] = { label: item.label, value };
+    if (item.hasTemp) {
+      const tempEl = document.getElementById(`temp-${item.id}`);
+      checks[item.id].temp = tempEl && tempEl.value ? parseFloat(tempEl.value) : null;
+    }
+  });
+
+  const anyFail = Object.values(checks).some(c => c.value === false);
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      product_name:  product,
+      supplier:      supplier,
+      expiry_date:   document.getElementById('expiry_date').value || null,
+      qty_value:     document.getElementById('qty_value').value ? parseFloat(document.getElementById('qty_value').value) : null,
+      qty_unit:      document.getElementById('qty_unit').value,
+      created_at:    Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    checks,
+    action_note: document.getElementById('action_note') ? document.getElementById('action_note').value.trim() : '',
+    overall_pass: !anyFail
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/incoming_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    // 폼 초기화
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// ── 초기화 ────────────────────────────────────────────
+document.getElementById('date').value = new Date().toISOString().slice(0,10);
+renderChecklist();
+</script>
+</body>
+</html>

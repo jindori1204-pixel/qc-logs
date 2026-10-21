@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>방충·방서 점검표 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 680px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p  { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    /* 기본정보 */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { display: flex; flex-direction: column; }
+    .field label { font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    /* 트랩 공통 */
+    .trap-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .trap-table th { background: #2e5f8a; color: #fff; padding: 7px 4px; text-align: center; font-size: 11px; font-weight: bold; }
+    .trap-table th.name-col { width: 80px; text-align: left; padding-left: 8px; }
+    .trap-table th.loc-col  { width: 110px; text-align: left; padding-left: 6px; }
+    .trap-table td { padding: 5px 3px; text-align: center; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .trap-table td.name-td { text-align: left; padding-left: 8px; font-weight: bold; font-size: 12px; color: #333; white-space: nowrap; }
+    .trap-table td.loc-td  { text-align: left; padding-left: 6px; font-size: 11px; color: #666; }
+    .trap-table tr:last-child td { border-bottom: none; }
+    .trap-table tr.has-catch { background: #fff8f3; }
+    .trap-table tr.has-issue { background: #fff8f8; }
+
+    /* 숫자 입력 */
+    .cnt { width: 44px; padding: 6px 2px; border: 1.5px solid #ddd; border-radius: 5px; font-size: 13px; font-weight: bold; text-align: center; font-family: inherit; color: #1a3a5c; -moz-appearance: textfield; }
+    .cnt::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .cnt:focus { border-color: #1a3a5c; outline: none; }
+    .total-cell { font-weight: bold; font-size: 13px; color: #c62828; }
+    .total-cell.zero { color: #aaa; }
+
+    /* 쥐트랩 상태 버튼 */
+    .sr-btns { display: flex; gap: 4px; justify-content: center; }
+    .sr-btn { padding: 6px 8px; border: 1.5px solid #ddd; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; background: #fff; font-family: inherit; color: #888; white-space: nowrap; }
+    .sr-btn.ok.active      { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .sr-btn.issue.active   { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    /* 특이사항 */
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; }
+
+    /* 저장 버튼 */
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+
+    /* 스크롤 힌트 */
+    .scroll-hint { font-size: 11px; color: #aaa; text-align: right; margin-bottom: 4px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    @media print {
+      body { background: #fff; font-size: 8pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 6px; }
+      .btn-save, .toast, .scroll-hint { display: none !important; }
+      .cnt { border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>방충·방서 점검표</h1>
+    <p>㈜위드프레쉬</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>점검일자</label><input type="date" id="date"></div>
+      <div class="field">
+        <label>점검자</label>
+        <select id="inspector">
+          <option value="">선택</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>확인자</label>
+        <select id="confirmer">
+          <option value="">선택</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 포충등 (비래해충) -->
+  <div class="card">
+    <div class="section-title">■ 포충등 <span class="section-sub">비래해충 포획수 입력 (마리)</span></div>
+    <div class="scroll-hint">← 좌우 스크롤</div>
+    <div class="table-wrap">
+      <table class="trap-table" id="uv-table">
+        <thead>
+          <tr>
+            <th class="name-col">설비명</th>
+            <th class="loc-col">설치위치</th>
+            <th>파리</th>
+            <th>나방</th>
+            <th>모기</th>
+            <th>하루살이</th>
+            <th>기타</th>
+            <th>합계</th>
+          </tr>
+        </thead>
+        <tbody id="uv-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 바퀴트랩 (보행해충) -->
+  <div class="card">
+    <div class="section-title">■ 바퀴트랩 <span class="section-sub">보행해충 포획수 입력 (마리)</span></div>
+    <div class="scroll-hint">← 좌우 스크롤</div>
+    <div class="table-wrap">
+      <table class="trap-table" id="roach-table">
+        <thead>
+          <tr>
+            <th class="name-col">설비명</th>
+            <th class="loc-col">설치위치</th>
+            <th>바퀴</th>
+            <th>거미</th>
+            <th>개미</th>
+            <th>기타</th>
+            <th>합계</th>
+          </tr>
+        </thead>
+        <tbody id="roach-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 쥐트랩 (설치류) -->
+  <div class="card">
+    <div class="section-title">■ 쥐트랩 <span class="section-sub">설치류 포획 여부</span></div>
+    <div class="table-wrap">
+      <table class="trap-table" id="rat-table">
+        <thead>
+          <tr>
+            <th class="name-col">설비명</th>
+            <th class="loc-col">설치위치</th>
+            <th>쥐</th>
+            <th>기타</th>
+            <th>합계</th>
+            <th style="width:90px;">상태</th>
+          </tr>
+        </thead>
+        <tbody id="rat-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 기준이탈 / 개선조치 -->
+  <div class="card">
+    <div class="section-title">■ 기준이탈 (원인파악)</div>
+    <textarea id="deviation" placeholder="기준이탈 내용 및 원인을 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 개선조치</div>
+    <textarea id="notes" placeholder="개선조치 내용을 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+// ── 포충등 데이터 (9개) ────────────────────────────────────
+const UV_TRAPS = [
+  { id: 'u1', name: '포충등 1', loc: '해동실' },
+  { id: 'u2', name: '포충등 2', loc: '제1전처리실' },
+  { id: 'u3', name: '포충등 3', loc: '제2전처리실' },
+  { id: 'u4', name: '포충등 4', loc: '가공및내포장실(1)' },
+  { id: 'u5', name: '포충등 5', loc: '가공및내포장실(2)' },
+  { id: 'u6', name: '포충등 6', loc: '소분업 소분실' },
+  { id: 'u7', name: '포충등 7', loc: '외포장실' },
+  { id: 'u8', name: '포충등 8', loc: '위생전실' },
+  { id: 'u9', name: '포충등 9', loc: '사무실' },
+];
+const UV_COLS = ['파리','나방','모기','하루살이','기타'];
+
+// ── 바퀴트랩 데이터 (15개) ───────────────────────────────
+const ROACH_TRAPS = [
+  { id: 'r1',  name: '바퀴트랩 1',  loc: '제2전처리실' },
+  { id: 'r2',  name: '바퀴트랩 2',  loc: '해동실문안(좌)' },
+  { id: 'r3',  name: '바퀴트랩 3',  loc: '해동실문안(우)' },
+  { id: 'r4',  name: '바퀴트랩 4',  loc: '가공 및 내포장실' },
+  { id: 'r5',  name: '바퀴트랩 5',  loc: '소분업 소분실' },
+  { id: 'r6',  name: '바퀴트랩 6',  loc: '외포장실문안(좌)' },
+  { id: 'r7',  name: '바퀴트랩 7',  loc: '외포장실문안(우)' },
+  { id: 'r8',  name: '바퀴트랩 8',  loc: '복도 탈의실 앞' },
+  { id: 'r9',  name: '바퀴트랩 9',  loc: '복도 화장실 앞' },
+  { id: 'r10', name: '바퀴트랩 10', loc: '현관 (좌)' },
+  { id: 'r11', name: '바퀴트랩 11', loc: '현관 (우)' },
+  { id: 'r12', name: '바퀴트랩 12', loc: '사무실' },
+  { id: 'r13', name: '바퀴트랩 13', loc: '큰화장실통로' },
+  { id: 'r14', name: '바퀴트랩 14', loc: '위생전실' },
+  { id: 'r15', name: '바퀴트랩 15', loc: '단순수산물가공구역' },
+];
+const ROACH_COLS = ['바퀴','거미','개미','기타'];
+
+// ── 쥐트랩 데이터 (8개) ─────────────────────────────────
+const RAT_TRAPS = [
+  { id: 'rt1', name: '쥐트랩 1', loc: '도면참조' },
+  { id: 'rt2', name: '쥐트랩 2', loc: '도면참조' },
+  { id: 'rt3', name: '쥐트랩 3', loc: '도면참조' },
+  { id: 'rt4', name: '쥐트랩 4', loc: '도면참조' },
+  { id: 'rt5', name: '쥐트랩 5', loc: '도면참조' },
+  { id: 'rt6', name: '쥐트랩 6', loc: '도면참조' },
+  { id: 'rt7', name: '쥐트랩 7', loc: '도면참조' },
+  { id: 'rt8', name: '쥐트랩 8', loc: '도면참조' },
+];
+const RAT_COLS = ['쥐','기타'];
+
+// ── 테이블 렌더링 공통 함수 ─────────────────────────────
+function renderCountTable(tbody, traps, cols, prefix) {
+  traps.forEach(trap => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${trap.id}`;
+    let cells = `<td class="name-td">${trap.name}</td><td class="loc-td">${trap.loc}</td>`;
+    cols.forEach(col => {
+      const fid = `${prefix}_${trap.id}_${col}`;
+      cells += `<td><input class="cnt" type="number" id="${fid}" value="0" min="0"
+        oninput="updateTotal('${trap.id}','${prefix}')"></td>`;
+    });
+    cells += `<td class="total-cell zero" id="total-${trap.id}">0</td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderRatTable(tbody) {
+  RAT_TRAPS.forEach(trap => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${trap.id}`;
+    let cells = `<td class="name-td">${trap.name}</td><td class="loc-td">${trap.loc}</td>`;
+    RAT_COLS.forEach(col => {
+      const fid = `rat_${trap.id}_${col}`;
+      cells += `<td><input class="cnt" type="number" id="${fid}" value="0" min="0"
+        oninput="updateRatTotal('${trap.id}')"></td>`;
+    });
+    cells += `<td class="total-cell zero" id="total-${trap.id}">0</td>`;
+    cells += `<td><div class="sr-btns">
+      <button class="sr-btn ok active" id="ok-${trap.id}" onclick="setRat('${trap.id}','ok')">이상없음</button>
+      <button class="sr-btn issue"     id="issue-${trap.id}" onclick="setRat('${trap.id}','issue')">이상</button>
+    </div></td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 합계 자동계산 ─────────────────────────────────────────
+function updateTotal(trapId, prefix) {
+  const cols = prefix === 'uv' ? UV_COLS : ROACH_COLS;
+  let sum = 0;
+  cols.forEach(col => {
+    const v = parseInt(document.getElementById(`${prefix}_${trapId}_${col}`)?.value) || 0;
+    sum += v;
+  });
+  const cell = document.getElementById(`total-${trapId}`);
+  cell.textContent = sum;
+  cell.className = sum > 0 ? 'total-cell' : 'total-cell zero';
+  document.getElementById(`row-${trapId}`).classList.toggle('has-catch', sum > 0);
+}
+
+function updateRatTotal(trapId) {
+  let sum = 0;
+  RAT_COLS.forEach(col => {
+    sum += parseInt(document.getElementById(`rat_${trapId}_${col}`)?.value) || 0;
+  });
+  const cell = document.getElementById(`total-${trapId}`);
+  cell.textContent = sum;
+  cell.className = sum > 0 ? 'total-cell' : 'total-cell zero';
+  if (sum > 0) {
+    setRat(trapId, 'issue');
+    document.getElementById(`row-${trapId}`).classList.add('has-issue');
+  }
+}
+
+function setRat(id, status) {
+  document.getElementById(`ok-${id}`).classList.toggle('active',    status === 'ok');
+  document.getElementById(`issue-${id}`).classList.toggle('active', status === 'issue');
+  document.getElementById(`row-${id}`).classList.toggle('has-issue', status === 'issue');
+}
+
+// ── Firebase 저장 ─────────────────────────────────────────
+async function saveRecord() {
+  const date      = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+  if (!date)      { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+
+  // 포충등 수집
+  const uvData = {};
+  let uvTotal = 0;
+  UV_TRAPS.forEach(t => {
+    const d = { name: t.name, loc: t.loc };
+    let sum = 0;
+    UV_COLS.forEach(col => {
+      const v = parseInt(document.getElementById(`uv_${t.id}_${col}`)?.value) || 0;
+      d[col] = v; sum += v;
+    });
+    d['합계'] = sum; uvTotal += sum;
+    uvData[t.id] = d;
+  });
+
+  // 바퀴트랩 수집
+  const roachData = {};
+  let roachTotal = 0;
+  ROACH_TRAPS.forEach(t => {
+    const d = { name: t.name, loc: t.loc };
+    let sum = 0;
+    ROACH_COLS.forEach(col => {
+      const v = parseInt(document.getElementById(`roach_${t.id}_${col}`)?.value) || 0;
+      d[col] = v; sum += v;
+    });
+    d['합계'] = sum; roachTotal += sum;
+    roachData[t.id] = d;
+  });
+
+  // 쥐트랩 수집
+  const ratData = {};
+  let ratIssue = 0;
+  RAT_TRAPS.forEach(t => {
+    const d = { name: t.name, loc: t.loc };
+    let sum = 0;
+    RAT_COLS.forEach(col => {
+      const v = parseInt(document.getElementById(`rat_${t.id}_${col}`)?.value) || 0;
+      d[col] = v; sum += v;
+    });
+    d['합계'] = sum;
+    d.status = document.getElementById(`issue-${t.id}`).classList.contains('active') ? 'issue' : 'ok';
+    if (d.status === 'issue') ratIssue++;
+    ratData[t.id] = d;
+  });
+
+  const payload = {
+    meta: { date, inspector, confirmer, created_at: Date.now(), reviewed: false, reviewed_at: null },
+    uv_traps:    uvData,
+    roach_traps: roachData,
+    rat_traps:   ratData,
+    summary: { uv_total: uvTotal, roach_total: roachTotal, rat_issue: ratIssue },
+    deviation: document.getElementById('deviation').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+    has_issue: uvTotal > 0 || roachTotal > 0 || ratIssue > 0
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/pest_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast(`저장 완료! ✓  포충등 ${uvTotal}마리 / 바퀴트랩 ${roachTotal}마리 / 쥐트랩 이상 ${ratIssue}건`, 'success');
+    setTimeout(() => location.reload(), 2500);
+  } catch(e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 4000);
+}
+
+// ── 초기화 ──────────────────────────────────────────────
+document.getElementById('date').value = new Date().toISOString().slice(0,10);
+renderCountTable(document.getElementById('uv-body'),    UV_TRAPS,    UV_COLS,    'uv');
+renderCountTable(document.getElementById('roach-body'), ROACH_TRAPS, ROACH_COLS, 'roach');
+renderRatTable(document.getElementById('rat-body'));
+</script>
+</body>
+</html>

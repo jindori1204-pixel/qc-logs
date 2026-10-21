@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>중요관리점(CCP) 검증점검표 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    .q-row { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .q-row:last-child { border-bottom: none; }
+    .q-row.has-alert { background: #fff8f8; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+    .q-text { font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 9px; }
+    .yn-btns { display: flex; gap: 6px; }
+    .yn-btn { flex: 1; max-width: 108px; padding: 9px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .yn-btn.yes.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .yn-btn.no.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .q-extra { margin-top: 10px; background: #f7f9fc; border-radius: 8px; padding: 10px 12px; }
+    .q-extra label { display: block; font-size: 11.5px; color: #555; margin-bottom: 5px; font-weight: bold; }
+    .q-extra input { width: 100%; padding: 9px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13.5px; font-family: inherit; background: #fff; }
+    .q-extra input:focus { border-color: #1a3a5c; outline: none; }
+
+    .q-action { margin-top: 10px; display: none; }
+    .q-action.visible { display: block; }
+    .q-action label { display: block; font-size: 11.5px; color: #c62828; font-weight: bold; margin-bottom: 5px; }
+    .q-action textarea { width: 100%; padding: 9px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 46px; background: #fff; }
+
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 66px; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 9pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>중요관리점(CCP) 검증점검표</h1>
+    <p>㈜위드프레쉬 · 월 1회 작성</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>점검일자</label><input type="date" id="date"></div>
+      <div class="field"><label>점검자 (작성)</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field"><label>승인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="process-sections"></div>
+
+  <div class="card">
+    <div class="section-title">■ 한계기준 이탈내용 / 개선조치 및 결과</div>
+    <div class="info-grid">
+      <div class="field full" style="margin-bottom:4px;">
+        <label>한계기준 이탈내용</label>
+        <textarea id="deviation" placeholder="이탈 내용을 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;"></textarea>
+      </div>
+      <div class="field full" style="margin-bottom:4px;">
+        <label>개선조치 및 결과</label>
+        <textarea id="action_result" placeholder="개선조치 및 결과를 입력하세요" style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;"></textarea>
+      </div>
+      <div class="field"><label>조치자</label><input type="text" id="action_by" placeholder="이름"></div>
+      <div class="field"><label>확인</label><input type="text" id="action_confirm" placeholder="확인자"></div>
+    </div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// ── 검증 문항 (실물 "중요관리점(CCP) 검증점검표" 양식 순서·문구와 동일) ──
+// extra: { id, label, type } — 예/아니오 아래에 함께 기록하는 항목
+const SECTIONS = [
+  {
+    id: 'metal', label: '금속검출 공정',
+    questions: [
+      { id: 'm1', text: '종사자가 주기적으로 테스트피스로 금속검출기의 감도 이상 유무를 확인하고 있습니까?' },
+      { id: 'm2', text: '금속검출기는 연 1회 검·교정(또는 정기점검)이 이루어지고 있습니까?',
+        extra: { id: 'metal_cal_date', label: '금속검출기 검·교정(또는 정기점검)일', type: 'date' } },
+      { id: 'm3', text: '종사자가 금속검출기 감도를 확인하는 방법을 정확히 알고 있습니까?' },
+      { id: 'm4', text: '종사자가 한계기준 이탈 시 실시해야 하는 개선조치 방법을 알고 있으며, 이탈 및 개선조치 내용이 기록되고 있습니까?',
+        extra: { id: 'metal_interview', label: '모니터링 담당자 인터뷰 일시', type: 'datetime-local' } },
+    ]
+  },
+  {
+    id: 'sanitize', label: '소독 및 헹굼공정',
+    questions: [
+      { id: 's1', text: '종사자가 주기적으로 소독농도, 소독시간, 세척횟수, 세척수량 및 세척시간을 확인하고 그 내용을 기록하고 있습니까?' },
+      { id: 's2', text: '타이머는 연 1회 이상 검·교정이 이루어지고 있습니까?',
+        extra: { id: 'sanitize_timer_date', label: '검·교정일 (타이머)', type: 'date' } },
+      { id: 's3', text: '종사자가 소독농도, 소독시간, 세척횟수, 세척수량 및 세척시간을 확인하는 방법을 정확히 알고 있습니까?' },
+      { id: 's4', text: '종사자가 한계기준 이탈 시 실시해야 하는 개선조치 방법을 알고 있으며, 이탈 및 개선조치 내용이 기록되고 있습니까?',
+        extra: { id: 'sanitize_interview', label: '모니터링 담당자 인터뷰 일시', type: 'datetime-local' } },
+    ]
+  },
+  {
+    id: 'wash', label: '세척공정',
+    questions: [
+      { id: 'w1', text: '종사자가 주기적으로 세척횟수, 세척수량 및 세척시간을 확인하고 그 내용을 기록하고 있습니까?' },
+      { id: 'w2', text: '타이머는 연 1회 이상 검·교정이 이루어지고 있습니까?',
+        extra: { id: 'wash_timer_date', label: '검·교정일 (타이머)', type: 'date' } },
+      { id: 'w3', text: '종사자가 세척횟수, 세척수량 및 세척시간을 확인하는 방법을 정확히 알고 있습니까?' },
+      { id: 'w4', text: '종사자가 한계기준 이탈 시 실시해야 하는 개선조치 방법을 알고 있으며, 이탈 및 개선조치 내용이 기록되고 있습니까?',
+        extra: { id: 'wash_interview', label: '모니터링 담당자 인터뷰 일시', type: 'datetime-local' } },
+    ]
+  },
+];
+
+document.getElementById('date').value = todayStr();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function renderSections() {
+  document.getElementById('process-sections').innerHTML = SECTIONS.map(sec => `
+    <div class="card">
+      <div class="section-title">■ ${sec.label} <span class="section-sub">예 / 아니오</span></div>
+      ${sec.questions.map(q => `
+        <div class="q-row" id="qrow-${q.id}">
+          <div class="q-text">${q.text}</div>
+          <div class="yn-btns">
+            <button type="button" class="yn-btn yes" id="yes-${q.id}" onclick="setYN('${q.id}',true)">예</button>
+            <button type="button" class="yn-btn no"  id="no-${q.id}"  onclick="setYN('${q.id}',false)">아니오</button>
+          </div>
+          ${q.extra ? `<div class="q-extra">
+            <label>${q.extra.label}</label>
+            <input type="${q.extra.type}" id="${q.extra.id}">
+          </div>` : ''}
+          <div class="q-action" id="qact-${q.id}">
+            <label>⚠ 조치사항</label>
+            <textarea id="action-${q.id}" placeholder="조치 내용을 입력하세요"></textarea>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function setYN(id, val) {
+  const yes = document.getElementById(`yes-${id}`);
+  const no = document.getElementById(`no-${id}`);
+  const already = val ? yes.classList.contains('active') : no.classList.contains('active');
+  yes.classList.remove('active'); no.classList.remove('active');
+  if (!already) (val ? yes : no).classList.add('active');
+  const bad = no.classList.contains('active');
+  document.getElementById(`qrow-${id}`).classList.toggle('has-alert', bad);
+  document.getElementById(`qact-${id}`).classList.toggle('visible', bad);
+}
+
+function getYN(id) {
+  if (document.getElementById(`yes-${id}`).classList.contains('active')) return true;
+  if (document.getElementById(`no-${id}`).classList.contains('active')) return false;
+  return null;
+}
+
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+
+  if (!date) { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('승인자를 선택하세요.', 'error'); return; }
+
+  const sections = {};
+  let hasAlert = false;
+
+  SECTIONS.forEach(sec => {
+    const qs = {};
+    sec.questions.forEach(q => {
+      const v = getYN(q.id);
+      if (v === false) hasAlert = true;
+      const entry = { text: q.text, value: v };
+      const actionEl = document.getElementById(`action-${q.id}`);
+      entry.action = v === false && actionEl ? actionEl.value.trim() : '';
+      if (q.extra) {
+        const el = document.getElementById(q.extra.id);
+        entry.extra_key = q.extra.id;
+        entry.extra_label = q.extra.label;
+        entry.extra_value = el && el.value ? el.value : null;
+      }
+      qs[q.id] = entry;
+    });
+    sections[sec.id] = { label: sec.label, questions: qs };
+  });
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    sections,
+    deviation: document.getElementById('deviation').value.trim(),
+    action_result: document.getElementById('action_result').value.trim(),
+    action_by: document.getElementById('action_by').value.trim(),
+    action_confirm: document.getElementById('action_confirm').value.trim(),
+    has_alert: hasAlert
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/ccp_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+renderSections();
+</script>
+</body>
+</html>

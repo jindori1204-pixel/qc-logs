@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>QC 일지 조회·결재 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+
+    /* ── 상단 헤더 ── */
+    .topbar { background: #1a3a5c; color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 14px; }
+    .topbar h1 { font-size: 17px; font-weight: bold; flex: 1; }
+    .badge-pending { background: #e53935; color: #fff; font-size: 13px; font-weight: bold; padding: 4px 12px; border-radius: 20px; display: none; }
+    .badge-pending.show { display: inline-block; }
+
+    /* ── 일지 종류 탭 ── */
+    .log-tabs { background: #fff; border-bottom: 2px solid #e0e8f0; display: flex; overflow-x: auto; }
+    .log-tab { flex: 1; min-width: 110px; padding: 13px 8px; text-align: center; font-size: 13px; font-weight: bold; color: #888; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; border: none; background: none; font-family: inherit; }
+    .log-tab.active { color: #1a3a5c; border-bottom: 3px solid #1a3a5c; }
+    .log-tab:hover { background: #f5f8fc; }
+
+    /* ── 파일 직접 열기 경고 배너 ── */
+    .local-warn { display: none; background: #fff3e0; border-bottom: 2px solid #ffcc80; padding: 12px 24px; font-size: 13px; color: #5d4037; line-height: 1.7; }
+    .local-warn.show { display: block; }
+    .local-warn b { color: #e65100; }
+    .local-warn .lw-close { float: right; background: none; border: none; font-size: 18px; color: #a1887f; cursor: pointer; line-height: 1; padding: 0 4px; font-family: inherit; }
+
+    /* ── 필터 영역 ── */
+    .filter-bar { background: #fff; padding: 12px 24px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-bar label { font-size: 13px; color: #555; }
+    .filter-bar select, .filter-bar input[type="date"] { padding: 8px 10px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; }
+    .filter-bar select:focus, .filter-bar input[type="date"]:focus { border-color: #1a3a5c; outline: none; }
+    .btn-search { padding: 8px 20px; background: #1a3a5c; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    .btn-search:hover { background: #0f2540; }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .radio-group { display: flex; gap: 10px; }
+    .radio-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; color: #444; }
+    .period-group { display: none; }
+    .period-group.show { display: flex; align-items: center; gap: 6px; }
+
+    /* ── 메인 ── */
+    .main { padding: 18px 24px; }
+
+    .stats { display: flex; gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 14px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); flex: 1; text-align: center; }
+    .stat-card .num { font-size: 28px; font-weight: bold; color: #1a3a5c; }
+    .stat-card .lbl { font-size: 12px; color: #888; margin-top: 2px; }
+    .stat-card.pending .num { color: #e53935; }
+    .stat-card.done .num { color: #2e7d32; }
+
+    /* ── 세척·소독제 품목 현황 (참고정보) ── */
+    .msds-ref { display: none; background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 16px 18px; margin-bottom: 16px; }
+    .msds-ref.show { display: block; }
+    .msds-ref-title { font-size: 14px; font-weight: bold; color: #1a3a5c; margin-bottom: 12px; }
+    .msds-ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .msds-card { border: 1.5px solid #e0e8f0; border-radius: 8px; padding: 12px 14px; background: #fafcfe; }
+    .msds-card .m-name { font-size: 14px; font-weight: bold; color: #1a3a5c; }
+    .msds-card .m-spec { font-size: 11px; color: #999; margin-left: 4px; }
+    .msds-card .m-stock { font-size: 20px; font-weight: bold; color: #2e5f8a; margin: 6px 0; }
+    .msds-card .m-stock small { font-size: 12px; color: #888; font-weight: normal; }
+    .msds-card .m-row { font-size: 11.5px; color: #666; line-height: 1.6; }
+    .msds-card .m-row b { color: #444; }
+
+    .list-wrap { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; }
+    .list-empty { padding: 48px; text-align: center; color: #aaa; font-size: 15px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f7f9fc; }
+    th { padding: 11px 12px; font-size: 13px; color: #555; font-weight: bold; text-align: left; border-bottom: 2px solid #eee; }
+    td { padding: 12px 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr.data-row { cursor: pointer; }
+    tr.data-row:hover td { background: #f5f8ff; }
+    tr.data-row.empty-row { cursor: default; color: #bbb; }
+    tr.data-row.empty-row:hover td { background: none; }
+    tr.data-row.sunday-row td { background: #fafafa; }
+
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .status-badge.pending { background: #fff3e0; color: #e65100; }
+    .status-badge.done    { background: #e8f5e9; color: #2e7d32; }
+    .alert-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e53935; margin-right: 4px; }
+
+    /* ── 모달 ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 740px; box-shadow: 0 8px 32px rgba(0,0,0,.2); animation: slideUp .2s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { background: #1a3a5c; color: #fff; padding: 16px 20px; border-radius: 12px 12px 0 0; display: flex; align-items: center; }
+    .modal-header h2 { flex: 1; font-size: 16px; }
+    .modal-close { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; }
+    .modal-body { padding: 20px; }
+
+    .info-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .info-item { flex: 1; min-width: 120px; }
+    .info-item .lbl { font-size: 12px; color: #888; margin-bottom: 3px; }
+    .info-item .val { font-size: 14px; font-weight: bold; }
+
+    /* 공통 상세 테이블 */
+    .detail-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 13px; }
+    .detail-table th { background: #f7f9fc; padding: 8px 10px; border: 1px solid #e0e0e0; text-align: center; color: #555; font-size: 12px; }
+    .detail-table td { padding: 8px 10px; border: 1px solid #e0e0e0; }
+    .detail-table .lbl-col { font-weight: bold; background: #fafafa; text-align: left; }
+    .detail-table .rescol { width: 96px; text-align: center; }
+    .detail-table .rescol.solo { width: 140px; }
+    .ok   { color: #2e7d32; font-weight: bold; }
+    .fail { color: #c62828; font-weight: bold; }
+
+    .alert-box { background: #fff8f8; border: 1.5px solid #ffcdd2; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    .alert-box h4 { color: #c62828; font-size: 13px; margin-bottom: 10px; }
+    .alert-row { margin-bottom: 8px; font-size: 13px; }
+    .alert-row .al { color: #555; }
+    .alert-row .ac { color: #222; font-weight: bold; margin-top: 2px; }
+
+    .notes-box { background: #f7f9fc; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #444; margin-bottom: 14px; }
+    .notes-box .lbl { font-size: 11px; color: #888; margin-bottom: 4px; }
+
+    /* 첨부사진 (날인 직인 / 품온 온도계) */
+    .photo-box { border: 1.5px solid #e0e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #fafcfe; }
+    .photo-box-title { font-size: 12.5px; font-weight: bold; color: #1a3a5c; margin-bottom: 10px; }
+    .photo-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+    .photo-strip img { width: 130px; height: 130px; object-fit: cover; border: 1px solid #ddd; border-radius: 6px; display: block; cursor: zoom-in; }
+
+    /* 상세보기에서 사진 첨부 */
+    .photo-edit { border: 1.5px solid #e0e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px; background: #fafcfe; }
+    .photo-edit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .photo-edit-title { font-size: 13px; font-weight: bold; color: #1a3a5c; flex: 1; min-width: 150px; }
+    .btn-photo-add { display: inline-block; padding: 10px 16px; background: #2e5f8a; color: #fff; border-radius: 8px; font-size: 13.5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .btn-photo-add:hover { background: #1a3a5c; }
+    .btn-photo-add.busy { background: #aab; cursor: not-allowed; }
+    .photo-edit-status { font-size: 12px; color: #888; }
+    .photo-edit-status.ok { color: #2e7d32; font-weight: bold; }
+    .photo-edit-status.err { color: #c62828; font-weight: bold; }
+    .photo-edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .photo-edit-item { position: relative; border: 1.5px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
+    .photo-edit-item img { width: 100%; height: 120px; object-fit: cover; display: block; cursor: zoom-in; }
+    .photo-edit-del { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; font-family: inherit; }
+    .photo-edit-empty { font-size: 12.5px; color: #aaa; text-align: center; padding: 18px 0; border: 1.5px dashed #dfe6ee; border-radius: 8px; }
+    .photo-edit-hint { font-size: 11px; color: #999; margin-top: 8px; line-height: 1.5; }
+    .photo-cell-mark { font-size: 12px; color: #2e5f8a; font-weight: bold; }
+    .photo-cell-none { font-size: 12px; color: #ccc; }
+
+    .approve-area { border-top: 1px solid #eee; padding-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .approve-info { font-size: 13px; color: #888; }
+    .approve-info strong { color: #2e7d32; }
+    .btn-row { display: flex; gap: 10px; }
+    .btn-approve { padding: 12px 24px; background: #1a3a5c; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; font-family: inherit; cursor: pointer; }
+    .btn-approve:hover { background: #0f2540; }
+    .btn-approve:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-print { padding: 12px 20px; background: #fff; color: #1a3a5c; border: 2px solid #1a3a5c; border-radius: 8px; font-size: 14px; font-weight: bold; font-family: inherit; cursor: pointer; }
+    .btn-print:hover { background: #f0f4f8; }
+
+    /* 인쇄 */
+    #print-area { display: none; }
+
+    /* ═══════════════ 휴대폰 (720px 이하) ═══════════════ */
+    @media (max-width: 720px) {
+      body { font-size: 15px; }
+
+      .topbar { padding: 12px 14px; gap: 8px; }
+      .topbar h1 { font-size: 15px; }
+      .topbar h1 .co { display: none; }          /* 회사명은 좁은 화면에서 숨김 */
+      .badge-pending { font-size: 12px; padding: 4px 10px; }
+
+      /* 탭 — 가로 스크롤 + 스냅 */
+      .log-tabs { -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+      /* 글자 길이에 맞춰 각자 폭을 갖도록 (flex:1 이면 라벨이 서로 겹침) */
+      .log-tab { flex: 0 0 auto; min-width: 0; padding: 12px 14px; font-size: 12.5px; scroll-snap-align: start; }
+
+      /* 조회 조건 — 한 줄에 하나씩, 터치하기 좋게 */
+      .filter-bar { padding: 12px 14px; gap: 10px; flex-direction: column; align-items: stretch; }
+      .filter-group { flex-wrap: wrap; gap: 8px; }
+      .filter-group > label { width: 100%; font-size: 12px; color: #888; font-weight: bold; }
+      .filter-bar input[type="date"] { flex: 1; min-width: 0; }
+      /* iOS 에서 입력 시 화면이 확대되지 않도록 16px 유지 */
+      .filter-bar select, .filter-bar input[type="date"] { font-size: 16px; padding: 11px 10px; }
+      .radio-group { width: 100%; gap: 14px; }
+      .radio-group label { font-size: 14px; }
+      .radio-group input { width: 18px; height: 18px; }
+      .btn-search { width: 100%; padding: 14px; font-size: 16px; }
+
+      .main { padding: 14px; }
+      .stats { gap: 8px; }
+      .stat-card { padding: 12px 6px; }
+      .stat-card .num { font-size: 22px; }
+      .stat-card .lbl { font-size: 11px; }
+
+      /* 목록 — 표 대신 카드 한 장씩 */
+      .list-wrap { background: none; box-shadow: none; border-radius: 0; overflow: visible; }
+      .list-wrap thead { display: none; }
+      .list-wrap table, .list-wrap tbody, .list-wrap tr, .list-wrap td { display: block; width: 100%; }
+      .list-wrap tr.data-row {
+        background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+        margin-bottom: 10px; padding: 6px 0; border: none;
+      }
+      .list-wrap tr.data-row:hover td { background: none; }
+      .list-wrap tr.data-row:active { background: #f5f8ff; }
+      .list-wrap td {
+        border: none; border-bottom: 1px solid #f4f6f9;
+        display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+        padding: 8px 14px; font-size: 14px; text-align: right;
+      }
+      .list-wrap tr.data-row td:last-child { border-bottom: none; }
+      .list-wrap td::before {
+        content: attr(data-label); color: #8a97a6; font-size: 12px; font-weight: bold;
+        text-align: left; flex: 0 0 auto; white-space: nowrap;
+      }
+      .list-wrap td:not([data-label])::before { content: ''; }
+      /* 세척·소독제 수불의 빈 날짜 줄은 한 줄로 간단히 */
+      .list-wrap tr.empty-row { box-shadow: none; background: #fafbfc; margin-bottom: 6px; padding: 2px 0; }
+      .list-wrap tr.empty-row td { padding: 5px 14px; font-size: 12.5px; border-bottom: none; }
+      .list-empty { padding: 32px 16px; font-size: 14px; }
+
+      .msds-ref { padding: 14px; }
+      .msds-ref-grid { grid-template-columns: 1fr; }
+
+      /* 상세 창 — 화면 꽉 차게 */
+      /* align-items:stretch 를 쓰면 모달 높이가 화면 높이로 고정돼
+         내용이 길 때 흰 배경이 안 따라와 뒷화면이 비쳐 보인다 → flex-start 유지 */
+      .modal-overlay { padding: 0; align-items: flex-start; }
+      .modal { max-width: 100%; border-radius: 0; min-height: 100%; }
+      .modal-header { border-radius: 0; position: sticky; top: 0; z-index: 5; padding: 14px; }
+      .modal-header h2 { font-size: 14.5px; }
+      .modal-close { font-size: 26px; padding: 0 6px; }
+      .modal-body { padding: 14px; }
+      .info-row { gap: 8px; }
+      .info-item { min-width: 96px; }
+      .detail-table { font-size: 12px; }
+      .detail-table th, .detail-table td { padding: 6px 7px; }
+
+      /* 상세 표는 가로 스크롤 (openModal 에서 감싸줌) */
+      .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
+      .tbl-scroll > .detail-table { margin-bottom: 0; }
+
+      /* 점검결과 칸은 오른쪽에 붙여 고정 — 관리기준이 길어도 판정이 늘 보이게 */
+      .detail-table .rescol { position: sticky; z-index: 2; width: 84px; min-width: 84px; max-width: 84px; font-size: 11.5px; }
+      .detail-table th.rescol { background: #eef3f8; }
+      .detail-table td.rescol { background: #fff; }
+      .detail-table .rescol.r1 { right: 83px; box-shadow: -5px 0 6px -4px rgba(0,0,0,.20); }
+      .detail-table .rescol.r2 { right: 0; }
+      .detail-table .rescol.solo { right: 0; width: 96px; min-width: 96px; box-shadow: -5px 0 6px -4px rgba(0,0,0,.20); }
+
+      .photo-edit { padding: 12px; }
+      .photo-edit-head { gap: 8px; }
+      .btn-photo-add { width: 100%; text-align: center; padding: 14px; font-size: 15px; }
+      .photo-edit-grid { grid-template-columns: repeat(2, 1fr); }
+
+      .approve-area { flex-direction: column; align-items: stretch; gap: 10px; }
+      .btn-row { flex-direction: column; gap: 8px; }
+      .btn-approve, .btn-print { width: 100%; padding: 15px; font-size: 15px; }
+      .approve-info { text-align: center; font-size: 12.5px; }
+    }
+
+    /* 아주 좁은 화면 */
+    @media (max-width: 380px) {
+      .log-tab { min-width: 80px; font-size: 12px; }
+      .stat-card .num { font-size: 19px; }
+      .photo-edit-grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 12mm 14mm; }
+      html, body { height: auto !important; }
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      /* position:fixed 는 뷰포트 1페이지 높이로만 렌더링되어 내용이 길면 잘려나감 —
+         absolute + 문서 흐름 기준으로 배치해야 여러 페이지에 걸쳐 정상 출력됨 */
+      #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%;
+        padding: 0; font-family: 'Malgun Gothic', sans-serif; font-size: 9.5pt; color: #000; }
+      .p-title { font-size: 15pt; font-weight: bold; text-align: center; margin-bottom: 4mm; letter-spacing: 2px; }
+      .p-company { text-align: center; font-size: 9pt; color: #555; margin-bottom: 5mm; }
+      .p-meta { width: 100%; border-collapse: collapse; margin-bottom: 5mm; page-break-inside: avoid; }
+      .p-meta td { border: 1px solid #000; padding: 4px 8px; font-size: 9.5pt; }
+      .p-meta .lbl { background: #f0f0f0; font-weight: bold; width: 70px; }
+      .p-section { font-size: 10.5pt; font-weight: bold; margin: 4mm 0 2mm; page-break-after: avoid; }
+      .p-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 4mm; }
+      .p-table thead { display: table-header-group; } /* 페이지 넘어갈 때마다 헤더 반복 */
+      .p-table tfoot { display: table-footer-group; }
+      .p-table th { border: 1px solid #000; padding: 4px; background: #e8e8e8; text-align: center; }
+      .p-table td { border: 1px solid #000; padding: 4px 6px; }
+      .p-table tr { page-break-inside: avoid; break-inside: avoid; }
+      .p-table.p-tight th, .p-table.p-tight td { padding: 2px 3px; line-height: 1.25; }   /* MF 검품: A4 1장 */
+      .p-sign { display: flex; justify-content: flex-end; gap: 15mm; margin-top: 6mm; page-break-inside: avoid; }
+      .p-sign-box { border: 1px solid #000; width: 70px; text-align: center; }
+      .p-sign-title { background: #f0f0f0; padding: 3px; font-size: 9pt; font-weight: bold; border-bottom: 1px solid #000; }
+      .p-sign-name { padding: 10px 4px 6px; font-size: 10pt; }
+      .p-sign-stamp { padding: 0 4px 6px; font-size: 8pt; color: #555; }
+      /* 첨부사진 인쇄 — 한 장씩 잘리지 않게 */
+      .p-photos { display: flex; flex-wrap: wrap; gap: 4mm; margin-bottom: 4mm; }
+      .p-photos img { max-width: 70mm; max-height: 70mm; border: 1px solid #000; page-break-inside: avoid; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 상단 헤더 -->
+<div class="topbar">
+  <h1>QC 일지 조회·결재<span class="co"> — ㈜위드프레쉬</span></h1>
+  <div class="badge-pending" id="badge-pending">미결재 <span id="pending-count">0</span>건</div>
+</div>
+
+<!-- 파일을 직접 열었을 때 (휴대폰에서 조회가 안 되는 주된 원인) -->
+<div class="local-warn" id="local-warn">
+  <button class="lw-close" onclick="document.getElementById('local-warn').classList.remove('show')" aria-label="닫기">✕</button>
+  <b>⚠ 저장된 파일을 직접 열었습니다.</b> 이렇게 열면 휴대폰에서는 <b>조회가 되지 않습니다</b>
+  (보안 때문에 인터넷 통신이 막힙니다).<br>
+  평소 쓰시던 <b>인터넷 주소(github.io 링크)</b>로 열어주세요. PC에서는 파일로 열어도 동작합니다.
+</div>
+
+<!-- 일지 종류 탭 -->
+<div class="log-tabs">
+  <button class="log-tab active" data-type="temperature" onclick="switchTab('temperature')">🌡 온도기록지</button>
+  <button class="log-tab" data-type="hygiene"     onclick="switchTab('hygiene')">🧹 위생점검</button>
+  <button class="log-tab" data-type="pest"        onclick="switchTab('pest')">🐛 방충방서</button>
+  <button class="log-tab" data-type="air_filter"  onclick="switchTab('air_filter')">💨 압축공기필터</button>
+  <button class="log-tab" data-type="waste"       onclick="switchTab('waste')">🗑 폐기물관리</button>
+  <button class="log-tab" data-type="msds"        onclick="switchTab('msds')">🧴 세척·소독제 수불</button>
+  <button class="log-tab" data-type="process"     onclick="switchTab('process')">⚙ 공정관리</button>
+  <button class="log-tab" data-type="material"    onclick="switchTab('material')">📦 원재료 육안검사</button>
+  <button class="log-tab" data-type="submaterial" onclick="switchTab('submaterial')">📮 부자재 육안검사</button>
+  <button class="log-tab" data-type="personal_hygiene" onclick="switchTab('personal_hygiene')">👤 개인위생</button>
+  <button class="log-tab" data-type="vehicle"     onclick="switchTab('vehicle')">🚚 운송차량</button>
+  <button class="log-tab" data-type="ccp"         onclick="switchTab('ccp')">✅ CCP 검증</button>
+  <button class="log-tab" data-type="mf_inspection" onclick="switchTab('mf_inspection')">🦪 MF 검품</button>
+</div>
+
+<!-- 필터 -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>조회기간</label>
+    <input type="date" id="start-date">
+    <span style="color:#aaa;">~</span>
+    <input type="date" id="end-date">
+  </div>
+  <div class="filter-group period-group" id="period-group">
+    <label>점검주기</label>
+    <select id="sel-period">
+      <option value="daily">일일점검</option>
+      <option value="weekly">주간점검</option>
+      <option value="monthly">월간점검</option>
+      <option value="quarterly">분기점검</option>
+      <option value="annual">연간점검</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>결재상태</label>
+    <div class="radio-group">
+      <label><input type="radio" name="status" value="all" checked> 전체</label>
+      <label><input type="radio" name="status" value="pending"> 미결재</label>
+      <label><input type="radio" name="status" value="done"> 결재완료</label>
+    </div>
+  </div>
+  <div class="filter-group period-group" id="msds-item-group">
+    <label>품목</label>
+    <select id="msds-item-select" onchange="renderList(currentRecords)"></select>
+  </div>
+  <button class="btn-search" onclick="loadRecords()">조회</button>
+</div>
+
+<!-- 메인 -->
+<div class="main">
+  <div class="msds-ref" id="msds-ref">
+    <div class="msds-ref-title">■ 세척·소독제 품목 현황 (제품용도·사용처·사용방법·사용주기 참고)</div>
+    <div class="msds-ref-grid" id="msds-ref-grid"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl" id="stat-total-lbl">전체 기록</div></div>
+    <div class="stat-card pending"><div class="num" id="stat-pending">—</div><div class="lbl" id="stat-pending-lbl">미결재</div></div>
+    <div class="stat-card done"><div class="num" id="stat-done">—</div><div class="lbl" id="stat-done-lbl">결재완료</div></div>
+  </div>
+  <div class="list-wrap">
+    <div class="list-empty" id="list-empty">조회기간을 선택하고 조회 버튼을 누르세요.</div>
+    <table id="list-table" style="display:none">
+      <thead><tr id="list-header"></tr></thead>
+      <tbody id="list-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">상세 보기</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-row" id="modal-info"></div>
+      <div id="modal-content"></div>
+      <div id="modal-photos"></div>
+      <div class="approve-area">
+        <div class="approve-info" id="d-approve-info">결재 대기 중</div>
+        <div class="btn-row">
+          <button class="btn-print" onclick="printRecord()">🖨 인쇄</button>
+          <button class="btn-print" id="btn-excel" style="display:none;" onclick="exportRecordExcel()">📊 엑셀 다운로드</button>
+          <button class="btn-approve" id="btn-approve" onclick="approveRecord()">✔ 확인 완료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+
+<!-- 방충방서 등 엑셀(.xlsx) 다운로드용 — SheetJS (방역업체 제출용 보고서 변환 기능, 2026-07-14 추가) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+const CONFIRMER = '김현우 부장';
+
+let currentTab = 'temperature';
+let currentRecords = {};
+let currentStart = '';
+let currentEnd = '';
+let currentPeriod = 'daily';
+let selectedId = '';
+
+// ── 탭 설정 ──────────────────────────────────────────────
+const TAB_CONFIG = {
+  temperature: {
+    label: '냉장·냉동 온도기록지',
+    path: (y, m) => `temperature_logs/${y}/${m}`,
+    headers: ['점검일자','점검자','이상','결재상태','결재일시'],
+    rowFn: renderTempRow,
+    modalFn: renderTempModal,
+    printFn: printTemp,
+  },
+  hygiene: {
+    label: '위생점검일지',
+    path: (y, m, p) => `hygiene_logs/${p}/${y}/${m}`,
+    headers: ['점검일자','점검자','주기','이상','결재상태','결재일시'],
+    rowFn: renderHygieneRow,
+    modalFn: renderHygieneModal,
+    printFn: printHygiene,
+  },
+  pest: {
+    label: '방충·방서 점검표',
+    path: (y, m) => `pest_logs/${y}/${m}`,
+    headers: ['점검일자','점검자','포충등','바퀴트랩','쥐트랩 이상','결재상태','결재일시'],
+    rowFn: renderPestRow,
+    modalFn: renderPestModal,
+    printFn: printPest,
+    exportFn: exportPestExcel,
+  },
+  air_filter: {
+    label: 'Air Compressor 관리 점검표',
+    path: (y, m) => `air_filter_logs/${y}/${m}`,
+    headers: ['점검일자','작성자','이상','결재상태','결재일시'],
+    rowFn: renderAirFilterRow,
+    modalFn: renderAirFilterModal,
+    printFn: printAirFilter,
+  },
+  waste: {
+    label: '폐기물 반출대장',
+    path: (y, m) => `waste_logs/${y}/${m}`,
+    headers: ['반출일자','폐기물내역','반출량','처리업체','세척소독','작성'],
+    rowFn: renderWasteRow,
+    modalFn: renderWasteModal,
+    printFn: printWaste,
+  },
+  msds: {
+    label: '세척·소독제 수불대장',
+    path: (y, m) => `msds_logs/${y}/${m}`,
+    headers: ['일자','품목','구분','수량','처리 후 재고','작성자'],
+    rowFn: renderMsdsRow,
+    modalFn: renderMsdsModal,
+    printFn: printMsds,
+  },
+  process: {
+    label: '공정관리 점검일지',
+    path: (y, m) => `process_logs/${y}/${m}`,
+    headers: ['점검일자','제품군','제품명','점검자','날인사진','이상','결재상태','결재일시'],
+    rowFn: renderProcessRow,
+    modalFn: renderProcessModal,
+    printFn: printProcess,
+  },
+  material: {
+    label: '원재료 육안검사 일지',
+    path: (y, m) => `material_logs/${y}/${m}`,
+    headers: ['입고일자','품명','구입처','입고량','품온','품온사진','판정','결재상태','결재일시'],
+    rowFn: renderMaterialRow,
+    modalFn: renderMaterialModal,
+    printFn: printMaterial,
+  },
+  submaterial: {
+    label: '부자재 육안검사 일지',
+    path: (y, m) => `submaterial_logs/${y}/${m}`,
+    headers: ['입고일자','품명','반입처','수량','결과','결재상태','결재일시'],
+    rowFn: renderSubmaterialRow,
+    modalFn: renderSubmaterialModal,
+    printFn: printSubmaterial,
+  },
+  personal_hygiene: {
+    label: '개인위생 점검표',
+    path: (y, m) => `personal_hygiene_logs/${y}/${m}`,
+    headers: ['점검일자','작성자','이상','결재상태','결재일시'],
+    rowFn: renderPersonalHygieneRow,
+    modalFn: renderPersonalHygieneModal,
+    printFn: printPersonalHygiene,
+  },
+  vehicle: {
+    label: '운송차량 점검표',
+    path: (y, m) => `vehicle_logs/${y}/${m}`,
+    headers: ['점검일자','구분','차량번호','품목','이상','결재상태','결재일시'],
+    rowFn: renderVehicleRow,
+    modalFn: renderVehicleModal,
+    printFn: printVehicle,
+  },
+  ccp: {
+    label: '중요관리점(CCP) 검증점검표',
+    path: (y, m) => `ccp_logs/${y}/${m}`,
+    headers: ['점검일자','점검자','이상','결재상태','결재일시'],
+    rowFn: renderCcpRow,
+    modalFn: renderCcpModal,
+    printFn: printCcp,
+  },
+  mf_inspection: {
+    label: 'MF 산지직송 검품일지',
+    path: (y, m) => `mf_inspection_logs/${y}/${m}`,
+    headers: ['검품일자','검품자','품목수','부적합','이상','결재상태','결재일시'],
+    rowFn: renderMfRow,
+    modalFn: renderMfModal,
+    printFn: printMf,
+  },
+};
+
+// ── 신규 일지 공통 헬퍼 ───────────────────────────────────
+const OX_LABEL = { ok: '<span class="ok">○ 적합</span>', ng: '<span class="fail">× 부적합</span>', na: '<span style="color:#78909c;">− 해당없음</span>' };
+const OX_TEXT  = { ok: '○', ng: '×', na: '−' };
+const YN_LABEL = v => v === true ? '<span class="ok">예</span>' : v === false ? '<span class="fail">아니오</span>' : '—';
+const YN_TEXT  = v => v === true ? '예' : v === false ? '아니오' : '—';
+const alertCell = flag => flag ? `<span class="alert-dot"></span>이상` : '정상';
+
+// 사진 배열을 썸네일 묶음으로 (모달용 — 클릭하면 새 창에서 원본 확인)
+function photoStrip(list, caption) {
+  if (!list || !list.length) return '';
+  return `<div class="photo-box">
+    <div class="photo-box-title">📷 ${caption} (${list.length}장)</div>
+    <div class="photo-strip">${list.map((src, i) =>
+      `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${caption} ${i + 1}"></a>`).join('')}</div>
+  </div>`;
+}
+// 인쇄용 — 링크 없이 이미지만
+function photoStripPrint(list, caption) {
+  if (!list || !list.length) return '';
+  return `<div class="p-section">■ ${caption}</div>
+    <div class="p-photos">${list.map(src => `<img src="${src}">`).join('')}</div>`;
+}
+
+// ── 세척·소독제 품목 마스터 (참고정보 — msds_log.html과 동일하게 유지) ──
+const MSDS_ITEMS = [
+  { id: 'clean_hand',   name: '프리미엄 크린핸드',  spec: '4L',          purpose: '손세정용 물비누',                          unit: 'L',
+    usage_location: '전 작업장 출입구 세정대', usage_method: '작업 전후 손바닥·손등·손가락사이 30초 이상 세정 후 흐르는 물로 헹굼', usage_cycle: '상시(작업자 개인위생, 1일 다회)' },
+  { id: 'abita5000',    name: '아비타-5000',        spec: '20kg',        purpose: '음용수 및 수영장수의 살균소독(수처리제 살균소독제)', unit: 'kg',
+    usage_location: '절임식품(게장류) 작업장',   usage_method: '물에 희석하여 게장류 절임 작업 시 소독용으로 사용',              usage_cycle: '게장 생산일마다(생산일지 기준 약 84%)' },
+  { id: 'yuhanlox',     name: '유한락스 오리지날',  spec: '16.6L/18kg',  purpose: '과일·채소류 등의 살균소독',                unit: 'L',
+    usage_location: '원료 전처리장 — 원료(수산물)·채소 세척소독조', usage_method: '물에 희석(권장 100~200ppm)하여 침지소독 후 충분히 헹굼', usage_cycle: '매일(생산일지 기준 전체 생산일)' },
+  { id: 'biocleancol',  name: '바이오크린콜',       spec: '20L',         purpose: '식품첨가물·혼합제제/기구등의 살균소독제',   unit: 'L',
+    usage_location: '생산라인 — 손소독·도마소독·작업대소독·작업기구소독', usage_method: '분무 또는 침지 후 자연건조 또는 헹굼',            usage_cycle: '매일(생산일지 기준 전체 생산일)' },
+  { id: 'goldpong',     name: '골드퐁',             spec: '13L',         purpose: '식기 및 조리기구 세척제',                  unit: 'L',
+    usage_location: '세척실 — 식기·트레이·조리도구', usage_method: '희석 후 스펀지로 세척, 흐르는 물로 헹굼',               usage_cycle: '매일(생산일지 기준 전체 생산일)' },
+  { id: 'duozone',      name: '두오존',             spec: '18L/20kg',    purpose: '산화제, 수처리제, 식품 및 식품첨가물',      unit: 'L',
+    usage_location: '각종 검사(원료입고 검수 등) 현장 — 고가 제품으로 광범위 소독시에만 사용', usage_method: '규정량 투입 후 잔류농도 확인',                                usage_cycle: '원료입고 검사일마다(생산일지 기준 약 65%)' },
+];
+
+// ── 세척·소독제 현재고 현황 로딩 ──
+async function loadMsdsReference() {
+  const grid = document.getElementById('msds-ref-grid');
+  grid.innerHTML = MSDS_ITEMS.map(it => `
+    <div class="msds-card" id="mref-${it.id}">
+      <div><span class="m-name">${it.name}</span><span class="m-spec">${it.spec}</span></div>
+      <div class="m-stock">조회 중... <small>${it.unit}</small></div>
+      <div class="m-row"><b>용도</b> · ${it.purpose}</div>
+      <div class="m-row"><b>사용처</b> · ${it.usage_location}</div>
+      <div class="m-row"><b>사용방법</b> · ${it.usage_method}</div>
+      <div class="m-row"><b>사용주기</b> · ${it.usage_cycle}</div>
+    </div>
+  `).join('');
+
+  await Promise.all(MSDS_ITEMS.map(async it => {
+    try {
+      const res = await fetch(`${FIREBASE_URL}/msds_stock/${it.id}.json`);
+      const data = await res.json();
+      const balance = data && typeof data.balance === 'number' ? data.balance : null;
+      const el = document.querySelector(`#mref-${it.id} .m-stock`);
+      if (el) el.innerHTML = balance !== null ? `${balance} <small>${it.unit}</small>` : `— <small>기록없음</small>`;
+    } catch (e) {
+      const el = document.querySelector(`#mref-${it.id} .m-stock`);
+      if (el) el.innerHTML = `조회실패 <small>${it.unit}</small>`;
+    }
+  }));
+}
+
+// 파일을 직접 열었는지(file:// content:// 등) 판단 — 휴대폰에서 조회가 막히는 주된 원인
+function isLocalFile() {
+  return location.protocol !== 'http:' && location.protocol !== 'https:';
+}
+function netErrorMsg(e) {
+  if (isLocalFile()) {
+    return '저장된 파일을 직접 열어서 자료를 불러올 수 없습니다. 인터넷 주소(github.io 링크)로 열어주세요.';
+  }
+  return '불러오기 실패 — 인터넷 연결을 확인해주세요. (' + (e && e.message ? e.message : '알 수 없는 오류') + ')';
+}
+(function warnIfLocal() {
+  if (isLocalFile()) document.getElementById('local-warn').classList.add('show');
+})();
+
+// ── 조회기간 초기화 (기본값: 올해 1/1 ~ 오늘) ──────────────
+function todayStr(d) {
+  d = d || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+(function init() {
+  const now = new Date();
+  document.getElementById('start-date').value = `${now.getFullYear()}-01-01`;
+  document.getElementById('end-date').value = todayStr(now);
+})();
+
+// 조회기간(YYYY-MM-DD ~ YYYY-MM-DD)이 걸쳐있는 연/월 목록 계산
+function getMonthRange(start, end) {
+  const months = [];
+  let [sy, sm] = start.split('-').map(Number);
+  const [ey, em] = end.split('-').map(Number);
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    months.push({ y: String(y), m: String(m).padStart(2, '0') });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return months;
+}
+
+// ── 탭 전환 ──────────────────────────────────────────────
+function switchTab(type) {
+  currentTab = type;
+  document.querySelectorAll('.log-tab').forEach(t => {
+    const on = t.dataset.type === type;
+    t.classList.toggle('active', on);
+    if (on && t.scrollIntoView) t.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  });
+  document.getElementById('period-group').classList.toggle('show', type === 'hygiene');
+  const msdsRef = document.getElementById('msds-ref');
+  const msdsItemGroup = document.getElementById('msds-item-group');
+  if (type === 'msds') {
+    msdsRef.classList.add('show');
+    msdsItemGroup.classList.add('show');
+    loadMsdsReference();
+    const sel = document.getElementById('msds-item-select');
+    if (!sel.options.length) {
+      sel.innerHTML = MSDS_ITEMS.map(it => `<option value="${it.id}">${it.name} (${it.spec})</option>`).join('');
+    }
+  } else {
+    msdsRef.classList.remove('show');
+    msdsItemGroup.classList.remove('show');
+  }
+  // 목록 초기화
+  document.getElementById('list-table').style.display = 'none';
+  document.getElementById('list-empty').textContent = '조회기간을 선택하고 조회 버튼을 누르세요.';
+  document.getElementById('list-empty').style.display = 'block';
+  document.getElementById('stat-total').textContent = '—';
+  document.getElementById('stat-pending').textContent = '—';
+  document.getElementById('stat-done').textContent = '—';
+  document.getElementById('stat-total-lbl').textContent = type === 'msds' ? '기초재고' : '전체 기록';
+  document.getElementById('stat-pending-lbl').textContent = type === 'msds' ? '총사용량' : '미결재';
+  document.getElementById('stat-done-lbl').textContent = type === 'msds' ? '기말재고' : '결재완료';
+  document.getElementById('badge-pending').classList.remove('show');
+  currentRecords = {};
+}
+
+// ── 조회 ─────────────────────────────────────────────────
+async function loadRecords() {
+  currentStart = document.getElementById('start-date').value;
+  currentEnd = document.getElementById('end-date').value;
+  currentPeriod = document.getElementById('sel-period').value;
+
+  if (!currentStart || !currentEnd) { alert('조회기간을 선택하세요.'); return; }
+  if (currentStart > currentEnd) { alert('시작일이 종료일보다 늦습니다.'); return; }
+
+  const cfg = TAB_CONFIG[currentTab];
+
+  document.getElementById('list-empty').textContent = '불러오는 중...';
+  document.getElementById('list-empty').style.display = 'block';
+  document.getElementById('list-table').style.display = 'none';
+
+  try {
+    const months = getMonthRange(currentStart, currentEnd);
+    const merged = {};
+
+    for (const { y, m } of months) {
+      const path = currentTab === 'hygiene'
+        ? cfg.path(y, m, currentPeriod)
+        : cfg.path(y, m);
+      const res = await fetch(`${FIREBASE_URL}/${path}.json`);
+      const data = await res.json();
+      if (data) {
+        Object.entries(data).forEach(([id, rec]) => {
+          merged[id] = { ...rec, _path: path };
+        });
+      }
+    }
+
+    // 조회기간(일 단위)으로 정확히 필터링
+    const filtered = {};
+    Object.entries(merged).forEach(([id, rec]) => {
+      const d = rec.meta && rec.meta.date;
+      if (d && d >= currentStart && d <= currentEnd) filtered[id] = rec;
+    });
+
+    currentRecords = filtered;
+    renderList(currentRecords);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('list-empty').textContent = netErrorMsg(e);
+    document.getElementById('list-empty').style.display = 'block';
+    document.getElementById('list-table').style.display = 'none';
+    if (isLocalFile()) document.getElementById('local-warn').classList.add('show');
+  }
+}
+
+// ── 목록 렌더링 ──────────────────────────────────────────
+function renderList(data) {
+  if (currentTab === 'msds') { renderMsdsDailyTable(data); return; }
+
+  // 일반 탭: 결재상태 라벨 복원
+  document.getElementById('stat-total-lbl').textContent = '전체 기록';
+  document.getElementById('stat-pending-lbl').textContent = '미결재';
+  document.getElementById('stat-done-lbl').textContent = '결재완료';
+
+  const cfg = TAB_CONFIG[currentTab];
+  const statusFilter = document.querySelector('input[name="status"]:checked').value;
+  const tbody = document.getElementById('list-body');
+  tbody.innerHTML = '';
+
+  // 헤더 설정
+  const hdr = document.getElementById('list-header');
+  hdr.innerHTML = cfg.headers.map(h => `<th>${h}</th>`).join('');
+
+  const records = Object.entries(data).map(([id, r]) => ({ id, ...r }));
+  records.sort((a, b) => b.meta.date.localeCompare(a.meta.date));
+
+  const total = records.length;
+  // MF 검품 '작성 대기'(draft)는 아직 결재할 수 없으므로 미결재 수에서 뺌
+  const pending = records.filter(r => !r.meta.reviewed && r.meta.status !== 'draft').length;
+  const done = records.filter(r => r.meta.reviewed).length;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-done').textContent = done;
+
+  const badge = document.getElementById('badge-pending');
+  if (pending > 0) { badge.classList.add('show'); document.getElementById('pending-count').textContent = pending; }
+  else badge.classList.remove('show');
+
+  const filtered = records.filter(r => {
+    if (statusFilter === 'pending') return !r.meta.reviewed && r.meta.status !== 'draft';
+    if (statusFilter === 'done') return r.meta.reviewed;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('list-empty').textContent = '해당 조건의 기록이 없습니다.';
+    document.getElementById('list-table').style.display = 'none';
+    document.getElementById('list-empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('list-empty').style.display = 'none';
+  document.getElementById('list-table').style.display = 'table';
+
+  filtered.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.className = 'data-row';
+    tr.onclick = () => openModal(r.id);
+    tr.innerHTML = cfg.rowFn(r);
+    labelCells(tr, cfg.headers);
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 세척·소독제: 품목별 일별 수불표 (구매량/사용량/재고량, 빈 날짜는 재고 이월) ──
+function eachDate(start, end) {
+  const dates = [];
+  let d = new Date(start + 'T00:00:00');
+  const endD = new Date(end + 'T00:00:00');
+  while (d <= endD) {
+    dates.push(todayStr(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+function renderMsdsDailyTable(data) {
+  document.getElementById('badge-pending').classList.remove('show');
+
+  const sel = document.getElementById('msds-item-select');
+  const itemId = sel.value || (MSDS_ITEMS[0] && MSDS_ITEMS[0].id);
+  const it = MSDS_ITEMS.find(m => m.id === itemId);
+
+  // 헤더 설정
+  const hdr = document.getElementById('list-header');
+  const MSDS_HEADERS = ['날짜','구매량','사용량','재고량','비고'];
+  hdr.innerHTML = MSDS_HEADERS.map(h => `<th>${h}</th>`).join('');
+
+  const records = Object.entries(data)
+    .map(([id, r]) => ({ id, ...r }))
+    .filter(r => r.item_id === itemId);
+
+  const byDate = {};
+  records.forEach(r => { byDate[r.meta.date] = r; }); // 하루 1건 기준(동일일자 재입력 시 마지막 항목 사용)
+
+  const dates = eachDate(currentStart, currentEnd);
+
+  let totalPurchase = 0, totalUsage = 0;
+  let openingBalance = null, closingBalance = null, runningBalance = null;
+
+  const tbody = document.getElementById('list-body');
+  tbody.innerHTML = '';
+
+  dates.forEach(date => {
+    const rec = byDate[date];
+    const isSunday = new Date(date + 'T00:00:00').getDay() === 0;
+    const tr = document.createElement('tr');
+
+    if (rec) {
+      if (openingBalance === null) openingBalance = Math.round((rec.balance_after - (rec.purchase_qty||0) + (rec.usage_qty||0)) * 100) / 100;
+      runningBalance = rec.balance_after;
+      closingBalance = runningBalance;
+      totalPurchase += rec.purchase_qty || 0;
+      totalUsage += rec.usage_qty || 0;
+      tr.className = 'data-row';
+      tr.onclick = () => openModal(rec.id);
+      tr.innerHTML = `<td><strong>${date}</strong></td><td>${rec.purchase_qty ? rec.purchase_qty+' '+rec.unit : '—'}</td><td>${rec.usage_qty ? rec.usage_qty+' '+rec.unit : '—'}</td><td><strong>${rec.balance_after} ${rec.unit}</strong></td><td>${rec.note||''}</td>`;
+    } else {
+      tr.className = 'data-row empty-row' + (isSunday ? ' sunday-row' : '');
+      const balCell = runningBalance !== null ? `${runningBalance} ${it ? it.unit : ''}` : '—';
+      tr.innerHTML = `<td>${date}${isSunday?' (일)':''}</td><td>—</td><td>—</td><td>${balCell}</td><td>${isSunday?'휴무':''}</td>`;
+    }
+    labelCells(tr, MSDS_HEADERS);
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('stat-total-lbl').textContent = '기초재고';
+  document.getElementById('stat-pending-lbl').textContent = '총사용량';
+  document.getElementById('stat-done-lbl').textContent = '기말재고';
+  document.getElementById('stat-total').textContent = openingBalance !== null ? `${openingBalance} ${it?it.unit:''}` : '—';
+  document.getElementById('stat-pending').textContent = it ? `${Math.round(totalUsage*100)/100} ${it.unit}` : '—';
+  document.getElementById('stat-done').textContent = closingBalance !== null ? `${closingBalance} ${it?it.unit:''}` : '—';
+
+  document.getElementById('list-empty').style.display = 'none';
+  document.getElementById('list-table').style.display = 'table';
+}
+
+// 휴대폰에서 목록이 카드로 바뀔 때 각 값 앞에 항목명을 보여주기 위한 라벨
+function labelCells(tr, headers) {
+  Array.prototype.forEach.call(tr.children, (td, i) => {
+    if (headers[i]) td.setAttribute('data-label', headers[i]);
+  });
+}
+
+// ── 공통 셀 헬퍼 ─────────────────────────────────────────
+function statusCell(r) {
+  return r.meta.reviewed
+    ? `<span class="status-badge done">결재완료</span>`
+    : `<span class="status-badge pending">미결재</span>`;
+}
+function reviewedAtCell(r) {
+  return r.meta.reviewed_at
+    ? new Date(r.meta.reviewed_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+    : '—';
+}
+
+// ── 온도기록지 행 ─────────────────────────────────────────
+function renderTempRow(r) {
+  const alert = r.has_alert ? `<span class="alert-dot"></span>이상` : '정상';
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector}</td><td>${alert}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+// ── 위생점검 행 ───────────────────────────────────────────
+function renderHygieneRow(r) {
+  const alert = r.has_alert ? `<span class="alert-dot"></span>이상` : '정상';
+  const periodLabel = {daily:'일일',weekly:'주간',monthly:'월간',quarterly:'분기',annual:'연간'}[r.meta.period] || r.meta.period;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector}</td><td>${periodLabel}</td><td>${alert}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+// ── 방충방서 행 ───────────────────────────────────────────
+function renderPestRow(r) {
+  const uvTotal    = r.summary?.uv_total    ?? '—';
+  const roachTotal = r.summary?.cockroach_catch ?? r.summary?.roach_total ?? '—';
+  const ratIssue   = r.summary?.rat_issue   ?? '—';
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector}</td><td>${uvTotal}마리</td><td>${roachTotal}마리</td><td>${ratIssue}건</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+// ── 압축공기필터 행 ───────────────────────────────────────
+function renderAirFilterRow(r) {
+  const alert = r.has_issue ? `<span class="alert-dot"></span>이상` : '정상';
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.writer||r.meta.inspector||'—'}</td><td>${alert}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+// ── 폐기물 반출대장 행 ────────────────────────────────────
+function renderWasteRow(r) {
+  const wash = r.wash_status === 'fail' ? '<span class="fail">× 부적합</span>' : '<span class="ok">○ 적합</span>';
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.item||'—'}</td><td>${r.qty_value||'—'} ${r.qty_unit||''}</td><td>${r.processor||'—'}</td><td>${wash}</td><td>${r.meta.writer||'—'}</td>`;
+}
+
+// ── 세척·소독제 수불 행 ───────────────────────────────────
+function renderMsdsRow(r) {
+  const isPurchase = (r.purchase_qty || 0) > 0;
+  const typeLabel = isPurchase ? '<span class="ok">구매(입고)</span>' : '사용';
+  const qty = isPurchase ? r.purchase_qty : r.usage_qty;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.item_name||'—'}</td><td>${typeLabel}</td><td>${qty ?? '—'} ${r.unit||''}</td><td>${r.balance_after ?? '—'} ${r.unit||''}</td><td>${r.meta.writer||r.meta.inspector||'—'}</td>`;
+}
+
+// ── 모달 열기 ────────────────────────────────────────────
+function openModal(id) {
+  selectedId = id;
+  const r = currentRecords[id];
+  if (!r) return;
+  const cfg = TAB_CONFIG[currentTab];
+
+  document.getElementById('modal-title').textContent = `${cfg.label} — ${r.meta.date}`;
+
+  // 기본정보
+  document.getElementById('modal-info').innerHTML = `
+    <div class="info-item"><div class="lbl">일자</div><div class="val">${r.meta.date}</div></div>
+    <div class="info-item"><div class="lbl">작성자</div><div class="val">${r.meta.inspector||r.meta.writer||'—'}</div></div>
+    <div class="info-item"><div class="lbl">등록시각</div><div class="val">${new Date(r.meta.created_at).toLocaleString('ko-KR')}</div></div>
+  `;
+
+  document.getElementById('modal-content').innerHTML = cfg.modalFn(r);
+  wrapDetailTables();    // 좁은 화면에서 상세 표가 가로 스크롤되도록
+  renderModalPhotos();   // 사진 첨부 영역 (공정관리·원재료 육안검사만)
+
+  // 엑셀 다운로드 버튼 (지원하는 탭에서만 노출 — 현재 방충방서만 지원)
+  const excelBtn = document.getElementById('btn-excel');
+  excelBtn.style.display = cfg.exportFn ? 'inline-block' : 'none';
+
+  // 결재 상태
+  const btn = document.getElementById('btn-approve');
+  const info = document.getElementById('d-approve-info');
+  if (r.meta.reviewed) {
+    const at = new Date(r.meta.reviewed_at).toLocaleString('ko-KR');
+    info.innerHTML = `<strong>✔ 결재완료</strong> — ${r.meta.confirmed_by||CONFIRMER} (${at})`;
+    btn.disabled = true; btn.textContent = '결재완료';
+  } else if (r.meta.status === 'draft') {
+    info.textContent = '검품 작성 전 — 작성 후 결재할 수 있습니다';
+    btn.disabled = true; btn.textContent = '작성 대기';
+  } else {
+    info.textContent = '결재 대기 중';
+    btn.disabled = false; btn.textContent = '✔ 확인 완료';
+  }
+
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// 상세 표마다 가로 스크롤 컨테이너를 씌운다 (이미 감싸져 있으면 그대로 둠)
+function wrapDetailTables() {
+  document.querySelectorAll('#modal-content table.detail-table').forEach(t => {
+    const p = t.parentElement;
+    if (p && (p.classList.contains('tbl-scroll') || p.style.overflowX === 'auto')) return;
+    const w = document.createElement('div');
+    w.className = 'tbl-scroll';
+    p.insertBefore(w, t);
+    w.appendChild(t);
+  });
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('modal-photos').innerHTML = '';   // 사진 영역 초기화
+}
+function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+
+// ── 온도 모달 ────────────────────────────────────────────
+function renderTempModal(r) {
+  const EQUIP_ORDER = ['freezer','fridge1','fridge2','sauce'];
+  const EQUIP_LABEL = {freezer:'동결실',fridge1:'제1냉동창고',fridge2:'제2냉동창고',sauce:'소스냉장고'};
+  let rows = '';
+  EQUIP_ORDER.forEach(eid => {
+    const eq = r.records?.[eid]; if (!eq) return;
+    const cells = ['t1','t2','t3'].map(tk => {
+      const t = eq[tk]; if (!t) return '<td>—</td>';
+      const cls = t.result === '적합' ? 'ok' : (t.result === '부적합' ? 'fail' : '');
+      return `<td class="${cls}">${t.temp !== null ? t.temp+'℃' : '—'}<br><small>${t.result}</small></td>`;
+    }).join('');
+    rows += `<tr><td class="lbl-col">${eq.label||EQUIP_LABEL[eid]}</td><td><small>${eq.standard||''}</small></td>${cells}</tr>`;
+  });
+  let alertHtml = '';
+  if (r.alerts && r.alerts.length > 0) {
+    alertHtml = `<div class="alert-box"><h4>⚠ 이상현황</h4>${r.alerts.map(a =>
+      `<div class="alert-row"><div class="al">▸ ${a.equipment} — ${a.time}</div><div class="ac">조치: ${a.action||'(미입력)'}</div></div>`).join('')}</div>`;
+  }
+  return `<table class="detail-table"><thead><tr><th>점검위치</th><th>기준</th><th>09~10시</th><th>13~14시</th><th>17~18시</th></tr></thead><tbody>${rows}</tbody></table>${alertHtml}`;
+}
+
+// ── 위생점검 모달 ─────────────────────────────────────────
+// 실물 "일반위생관리 및 공정점검표"의 기록칸 특수 항목(해동시간·구역별 온도·CCP작성일 등)을
+// 저장된 필드로부터 그대로 복원해서 보여준다 (checks 안의 text/value/action 외 필드는 전부 부가기록으로 처리)
+const HYGIENE_EXTRA_LABELS = {
+  thaw_time:   { label: '해동시간', unit: 'min' },
+  temp_clean:  { label: '청결구역', unit: '℃' },
+  temp_gen1:   { label: '일반구역(제1전처리실)', unit: '℃' },
+  temp_thaw:   { label: '일반구역(해동실)', unit: '℃' },
+  temp_simple: { label: '단순수산물가공구역', unit: '℃' },
+  ccp_date:    { label: 'CCP검증점검표 작성일', unit: '' },
+  test_date:   { label: '자가품질검사 실시일', unit: '' },
+  metal_date:  { label: '금속검출기 점검일', unit: '' },
+};
+
+// hygiene_log.html의 ITEMS와 동일한 순서·주기(phase)·관리(category) — 표 병합 표시용
+// (문항 text는 저장된 checks[id].text를 그대로 쓰고, 여기서는 정렬/그룹핑 정보만 사용)
+const HYGIENE_META = {
+  daily: [
+    ['b1','일일(작업전)','개인위생'], ['b2','일일(작업전)','개인위생'], ['b3','일일(작업전)','개인위생'],
+    ['b4','일일(작업전)','설비'], ['b5','일일(작업전)','검수'], ['b6','일일(작업전)','입고보관'],
+    ['d1','일일(작업중)','위생관리'], ['d2','일일(작업중)','위생관리'], ['d3','일일(작업중)','위생관리'], ['d4','일일(작업중)','위생관리'],
+    ['d5','일일(작업중)','공정관리'], ['d6','일일(작업중)','공정관리'], ['d7','일일(작업중)','공정관리'], ['d8','일일(작업중)','공정관리'],
+    ['d9','일일(작업중)','공정관리'], ['d10','일일(작업중)','공정관리'], ['d11','일일(작업중)','공정관리'], ['d12','일일(작업중)','공정관리'],
+    ['d13','일일(작업중)','공정관리'], ['d14','일일(작업중)','공정관리'], ['d15','일일(작업중)','공정관리'], ['d16','일일(작업중)','공정관리'],
+    ['d17','일일(작업중)','제품관리'], ['d18','일일(작업중)','폐기물관리'],
+    ['a1','일일(작업후)','청소소독'], ['a2','일일(작업후)','설비'], ['a3','일일(작업후)','제품관리'],
+  ],
+  weekly: [
+    ['w1','주간','청소소독'], ['w2','주간','청소소독'], ['w3','주간','청소소독'], ['w4','주간','청소소독'], ['w5','주간','청소소독'],
+    ['w6','주간','작업장'], ['w7','주간','작업장'], ['w8','주간','작업장'], ['w9','주간','작업장'],
+    ['w10','주간','장비'], ['w11','주간','보관'],
+  ],
+  monthly: [ ['m1','월간','청소'], ['m2','월간','교육'], ['m3','월간','검증'] ],
+  quarterly: [ ['q1','분기','검사'] ],
+  annual: [ ['an1','연간','점검검사'], ['an2','연간','점검검사'], ['an3','연간','점검검사'] ],
+};
+
+function renderHygieneModal(r) {
+  const checks = r.checks || {};
+  const meta = HYGIENE_META[r.meta.period] || Object.keys(checks).map(id => [id, r.meta.period, '']);
+
+  const rowsHtml = meta.map(([id, phase, category], idx) => {
+    const c = checks[id];
+    if (!c) return '';
+
+    const extraKeys = Object.keys(c).filter(k => !['text','value','action'].includes(k) && HYGIENE_EXTRA_LABELS[k]);
+    const extraHtml = extraKeys.map(k => {
+      const em = HYGIENE_EXTRA_LABELS[k];
+      const v = c[k];
+      return `<div style="font-size:10.5px;color:#555;">${em.label}: <strong>${v !== null && v !== undefined ? v : '—'}${em.unit}</strong></div>`;
+    }).join('');
+    const v = c.value === true ? '<span class="ok">예</span>' : c.value === false ? '<span class="fail">아니오</span>' : (extraKeys.length ? '' : '—');
+    const action = c.value === false && c.action ? `<div style="color:#c62828;font-size:10.5px;margin-top:3px;">조치: ${c.action}</div>` : '';
+
+    let cells = '';
+    const samePhase = idx > 0 && meta[idx-1][1] === phase;
+    if (!samePhase) {
+      let span = 1;
+      for (let j = idx+1; j < meta.length && meta[j][1] === phase; j++) span++;
+      cells += `<td rowspan="${span}" style="background:#f7f9fc;font-weight:bold;color:#1a3a5c;font-size:11px;text-align:center;white-space:nowrap;">${phase}</td>`;
+    }
+    const sameCat = idx > 0 && meta[idx-1][1] === phase && meta[idx-1][2] === category;
+    if (!sameCat) {
+      let span = 1;
+      for (let j = idx+1; j < meta.length && meta[j][1] === phase && meta[j][2] === category; j++) span++;
+      cells += `<td rowspan="${span}" style="background:#fafcfe;font-size:11px;text-align:center;">${category}</td>`;
+    }
+    cells += `<td style="font-size:12px;">${c.text || id}</td>`;
+    cells += `<td class="rescol solo">${v}${action}${extraHtml}</td>`;
+
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const notes = r.notes ? `<div class="notes-box"><div class="lbl">특이사항</div>${r.notes}</div>` : '';
+  return `<div style="overflow-x:auto;">
+    <table class="detail-table" style="font-size:12px;min-width:460px;">
+      <thead><tr><th style="width:64px;">주기</th><th style="width:66px;">관리</th><th style="text-align:left;">점검내용</th><th class="rescol solo">기록</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div>${notes}`;
+}
+
+// ── 방충방서 모달 ─────────────────────────────────────────
+function renderPestModal(r) {
+  // 포충등 요약
+  let uvRows = '';
+  if (r.uv_traps) {
+    Object.values(r.uv_traps).forEach(t => {
+      const total = t['합계'] || 0;
+      const cls = total > 0 ? 'fail' : '';
+      uvRows += `<tr><td class="lbl-col">${t.name}</td><td style="font-size:11px;color:#888;">${t.loc}</td>
+        <td>${t['파리']||0}</td><td>${t['나방']||0}</td><td>${t['모기']||0}</td><td>${t['하루살이']||0}</td><td>${t['기타']||0}</td>
+        <td class="${cls}" style="text-align:center;font-weight:bold;">${total}</td></tr>`;
+    });
+  }
+  // 바퀴트랩 요약
+  let roachRows = '';
+  if (r.roach_traps) {
+    Object.values(r.roach_traps).forEach(t => {
+      const total = t['합계'] || 0;
+      const cls = total > 0 ? 'fail' : '';
+      roachRows += `<tr><td class="lbl-col">${t.name}</td><td style="font-size:11px;color:#888;">${t.loc}</td>
+        <td>${t['바퀴']||0}</td><td>${t['거미']||0}</td><td>${t['개미']||0}</td><td>${t['기타']||0}</td>
+        <td class="${cls}" style="text-align:center;font-weight:bold;">${total}</td></tr>`;
+    });
+  }
+  // 쥐트랩 요약
+  let ratRows = '';
+  if (r.rat_traps) {
+    Object.values(r.rat_traps).forEach(t => {
+      const issue = t.status === 'issue';
+      ratRows += `<tr><td class="lbl-col">${t.name}</td><td style="font-size:11px;color:#888;">${t.loc}</td>
+        <td>${t['쥐']||0}</td><td>${t['기타']||0}</td>
+        <td class="${issue?'fail':''}" style="text-align:center;font-weight:bold;">${issue?'이상':'정상'}</td></tr>`;
+    });
+  }
+  const notes = r.notes ? `<div class="notes-box"><div class="lbl">개선조치</div>${r.notes}</div>` : '';
+  const deviation = r.deviation ? `<div class="notes-box"><div class="lbl">기준이탈(원인)</div>${r.deviation}</div>` : '';
+  return `
+    <p style="font-weight:bold;margin-bottom:8px;font-size:13px;">▶ 포충등 (비래해충)</p>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+    <table class="detail-table" style="font-size:12px;min-width:480px;">
+      <thead><tr><th style="text-align:left;">설비명</th><th>위치</th><th>파리</th><th>나방</th><th>모기</th><th>하루살이</th><th>기타</th><th>합계</th></tr></thead>
+      <tbody>${uvRows}</tbody>
+    </table></div>
+    <p style="font-weight:bold;margin-bottom:8px;font-size:13px;">▶ 바퀴트랩 (보행해충)</p>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+    <table class="detail-table" style="font-size:12px;min-width:420px;">
+      <thead><tr><th style="text-align:left;">설비명</th><th>위치</th><th>바퀴</th><th>거미</th><th>개미</th><th>기타</th><th>합계</th></tr></thead>
+      <tbody>${roachRows}</tbody>
+    </table></div>
+    <p style="font-weight:bold;margin-bottom:8px;font-size:13px;">▶ 쥐트랩 (설치류)</p>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+    <table class="detail-table" style="font-size:12px;">
+      <thead><tr><th style="text-align:left;">설비명</th><th>위치</th><th>쥐</th><th>기타</th><th>상태</th></tr></thead>
+      <tbody>${ratRows}</tbody>
+    </table></div>
+    ${deviation}${notes}`;
+}
+
+// ── 압축공기필터(Air Compressor) 모달 ──────────────────────
+const AF_STATUS_LABEL = { ok: '○ 이상없음', warn: '△ 점검요망', fail: '× 정비' };
+function renderAirFilterModal(r) {
+  const rows = Object.values(r.items || {}).map(it => {
+    const cls = it.status === 'ok' ? 'ok' : 'fail';
+    return `<tr><td class="lbl-col" style="font-size:12px;">${it.group} — ${it.name}</td><td class="${cls}" style="text-align:center;">${AF_STATUS_LABEL[it.status]||'—'}</td><td style="font-size:12px;">${it.note||''}</td></tr>`;
+  }).join('');
+  return `<table class="detail-table"><thead><tr><th style="text-align:left;">점검항목</th><th style="width:90px;">상태</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── 폐기물 반출대장 모달 ──────────────────────────────────
+function renderWasteModal(r) {
+  const wash = r.wash_status === 'fail' ? '<span class="fail">✗ 부적합</span>' : '<span class="ok">✔ 적합</span>';
+  const rows = `
+    <tr><td class="lbl-col">반출일자</td><td>${r.meta.date||'—'}</td></tr>
+    <tr><td class="lbl-col">폐기물내역</td><td>${r.item||'—'}</td></tr>
+    <tr><td class="lbl-col">반출량</td><td>${r.qty_value||'—'} ${r.qty_unit||''}</td></tr>
+    <tr><td class="lbl-col">처리업체</td><td>${r.processor||'—'}</td></tr>
+    <tr><td class="lbl-col">작성자</td><td>${r.meta.writer||'—'}</td></tr>
+    ${r.note ? `<tr><td class="lbl-col">비고</td><td>${r.note}</td></tr>` : ''}
+  `;
+  const action = r.action_note ? `<div class="alert-box"><h4>⚠ 관리기준 이탈사항 및 조치</h4><div>${r.action_note}</div></div>` : '';
+  return `<table class="detail-table">${rows}</table>
+    <div style="margin-bottom:12px;font-size:15px;font-weight:bold;">출고 후 세척·소독: ${wash}</div>${action}`;
+}
+
+// ── 세척·소독제 수불 모달 ─────────────────────────────────
+function renderMsdsModal(r) {
+  const it = MSDS_ITEMS.find(m => m.id === r.item_id);
+  const isPurchase = (r.purchase_qty || 0) > 0;
+  const rows = `
+    <tr><td class="lbl-col">일자</td><td>${r.meta.date||'—'}</td></tr>
+    <tr><td class="lbl-col">제품명</td><td>${r.item_name||'—'} ${r.spec?`<small style="color:#888;">(${r.spec})</small>`:''}</td></tr>
+    <tr><td class="lbl-col">제품용도</td><td>${r.purpose||'—'}</td></tr>
+    <tr><td class="lbl-col">구분</td><td>${isPurchase ? '<span class="ok">구매(입고)</span>' : '사용'}</td></tr>
+    <tr><td class="lbl-col">구매량</td><td>${r.purchase_qty || 0} ${r.unit||''}</td></tr>
+    <tr><td class="lbl-col">사용량</td><td>${r.usage_qty || 0} ${r.unit||''}</td></tr>
+    <tr><td class="lbl-col">처리 후 재고</td><td><strong>${r.balance_after ?? '—'} ${r.unit||''}</strong></td></tr>
+    <tr><td class="lbl-col">작성자</td><td>${r.meta.writer||'—'}</td></tr>
+    ${r.note ? `<tr><td class="lbl-col">비고</td><td>${r.note}</td></tr>` : ''}
+  `;
+  const ref = it ? `<div class="notes-box"><div class="lbl">사용처·사용방법·사용주기 (참고)</div>
+    ${it.usage_location} · ${it.usage_method} · ${it.usage_cycle}</div>` : '';
+  return `<table class="detail-table">${rows}</table>${ref}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  신규 일지 6종 — 목록행 / 상세모달 / 인쇄
+// ═══════════════════════════════════════════════════════════
+
+// 저장된 키 순서(p1, p10, p2 …)가 뒤섞이지 않도록 숫자 기준 정렬
+const byNumKey = (a, b) => (parseInt(String(a).replace(/\D/g, ''), 10) || 0) - (parseInt(String(b).replace(/\D/g, ''), 10) || 0);
+
+const MATERIAL_CHECK_ORDER    = ['vehicle_state','packaging','appearance','color','smell','foreign','labeling'];
+const SUBMATERIAL_CHECK_ORDER = ['vehicle_clean','outer_pack','appearance','spec_label','inner_pack'];
+const CCP_SECTION_ORDER       = ['metal','sanitize','wash'];
+
+// 적/부 판정칸이 없고 날짜만 기록하는 행 (process_log.html 의 yn:false 행과 동일하게 유지)
+const PROC_NO_JUDGE = {
+  shrimp: ['p7'], oyster: [], scallop: [], fish: [],
+  boiled: ['p10'], gejang: [], sunsal: [], crab_cut: ['p10'],
+};
+const noJudge = (product, id) => (PROC_NO_JUDGE[product] || []).indexOf(id) !== -1;
+
+// 공정관리 기록칸의 부가 수치 라벨
+const PROC_FIELDS = {
+  date:  { label: '일자',  unit: '' },
+  w1:    { label: '중량',  unit: 'g' },
+  w2:    { label: '중량',  unit: 'g' },
+  w3:    { label: '중량',  unit: 'g' },
+  temp:  { label: '온도',  unit: '℃' },
+  hour:  { label: '시간',  unit: '시간' },
+  salt:  { label: '염도',  unit: '%' },
+  speed: { label: '속도',  unit: '' },
+  min:   { label: '시간',  unit: '분' },
+  raw:   { label: '원료',  unit: 'g' },
+  sauce: { label: '소스',  unit: 'g' },
+  crab:  { label: '꽃게',  unit: 'g' },
+  p1:    { label: '수량',  unit: '토막' },
+  p2:    { label: '수량',  unit: '토막' },
+  p3:    { label: '수량',  unit: '토막' },
+};
+
+function procExtras(round, asText) {
+  return Object.keys(round || {})
+    .filter(k => k !== 'value' && PROC_FIELDS[k] && round[k] !== null && round[k] !== undefined && round[k] !== '')
+    .map(k => `${PROC_FIELDS[k].label} ${round[k]}${PROC_FIELDS[k].unit}`)
+    .join(asText ? ' / ' : '<br>');
+}
+
+function procCell(check, roundKey, skipJudge) {
+  const r = check[roundKey] || {};
+  const extras = procExtras(r);
+  // 적/부 버튼이 없는 행(날짜만 기록하는 소비기한 등)은 판정 표시 자체가 없음
+  const v = skipJudge ? ''
+          : r.value === true ? '<span class="ok">적</span>'
+          : r.value === false ? '<span class="fail">부</span>' : '—';
+  return `${extras ? `<div style="font-size:10.5px;color:#555;margin-bottom:3px;">${extras}</div>` : ''}${v}`;
+}
+
+// ── 공정관리 점검일지 ─────────────────────────────────────
+function renderProcessRow(r) {
+  const n = (r.photos && r.photos.stamp && r.photos.stamp.length) || 0;
+  const photo = n ? `<span class="photo-cell-mark">📷 ${n}장</span>` : `<span class="photo-cell-none">—</span>`;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.product_label || '—'}</td><td>${r.meta.product_name || '—'}</td>
+    <td>${r.meta.inspector || '—'}</td><td>${photo}</td><td>${alertCell(r.has_alert)}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+// 생산일보(쿠팡 수불대장)에서 불러온 품목·LOT (process_log.html 의 [생산일보에서 불러오기])
+function procLedgerItems(r) { const l = r.ledger; return l ? (Array.isArray(l.items) ? l.items : Object.values(l.items || {})) : []; }
+function procLedgerRawLots(r) { const l = r.ledger; return l ? (Array.isArray(l.raw_lots) ? l.raw_lots : Object.values(l.raw_lots || {})) : []; }
+function procLedgerHtml(r) {
+  const items = procLedgerItems(r); if (!items.length) return '';
+  const raws = procLedgerRawLots(r);
+  return `<div style="font-size:12.5px;font-weight:bold;color:#1a3a5c;margin-bottom:6px;">■ 생산내역 (생산·물류일보)</div>
+    <table class="detail-table" style="font-size:12px;"><thead><tr><th style="text-align:left;">제품</th><th>LOT</th><th>수량</th><th>채널</th></tr></thead>
+    <tbody>${items.map(it => `<tr><td>${it.name || ''}${it.thaw && !/해동/.test(it.name || '') ? ' (해동)' : ''}</td><td style="text-align:center;">${it.lot || ''}</td>
+      <td style="text-align:right;">${it.qty ?? ''}</td><td style="text-align:center;">${it.ch || ''}</td></tr>`).join('')}</tbody></table>
+    ${raws.length ? `<p style="font-size:11.5px;color:#666;margin:-6px 0 12px;">원료 LOT: ${raws.join(', ')}</p>` : ''}`;
+}
+
+function renderProcessModal(r) {
+  const checks = r.checks || {};
+  const ids = Object.keys(checks).sort(byNumKey);
+  const lbl = r.round_labels || {};
+
+  const rows = ids.map((id, idx) => {
+    const c = checks[id];
+    const skip = noJudge(r.meta.product, id);
+    let cells = '';
+    const prev = idx > 0 ? checks[ids[idx - 1]] : null;
+    if (!prev || prev.proc !== c.proc) {
+      let span = 1;
+      for (let j = idx + 1; j < ids.length && checks[ids[j]].proc === c.proc; j++) span++;
+      cells += `<td rowspan="${span}" style="background:#f7f9fc;font-weight:bold;color:#1a3a5c;font-size:11px;text-align:center;white-space:nowrap;">${c.proc}</td>`;
+    }
+    cells += `<td style="font-size:11px;text-align:center;background:#fafcfe;">${c.item || ''}</td>`;
+    cells += `<td style="font-size:11.5px;">${c.std || ''}${c.action ? `<div style="color:#c62828;font-size:10.5px;margin-top:3px;">조치: ${c.action}</div>` : ''}</td>`;
+    cells += `<td class="rescol r1">${procCell(c, 'r1', skip)}</td>`;
+    cells += `<td class="rescol r2">${procCell(c, 'r2', skip)}</td>`;
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const note = r.note ? `<div class="notes-box"><div class="lbl">비고</div>${r.note}</div>` : '';
+  const conf = r.confirm_note ? `<div class="notes-box"><div class="lbl">확인 (특이사항·개선조치)</div>${r.confirm_note}</div>` : '';
+
+  return `${procLedgerHtml(r)}<div class="info-row">
+      <div class="info-item"><div class="lbl">제품군</div><div class="val">${r.meta.product_label || '—'}</div></div>
+      <div class="info-item"><div class="lbl">제품명</div><div class="val">${r.meta.product_name || '—'}</div></div>
+      <div class="info-item"><div class="lbl">결재란</div><div class="val" style="font-size:12px;">${(r.meta.approvers || []).join(' · ') || '—'}</div></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="detail-table" style="font-size:12px;min-width:560px;">
+        <thead><tr><th style="width:74px;">공정명</th><th style="width:68px;">관리항목</th><th style="text-align:left;">관리 기준</th>
+          <th class="rescol r1">점검결과 ①${lbl.r1 ? `<br><small>${lbl.r1}</small>` : ''}</th>
+          <th class="rescol r2">점검결과 ②${lbl.r2 ? `<br><small>${lbl.r2}</small>` : ''}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>${note}${conf}`;
+}
+
+function printProcess(r) {
+  const checks = r.checks || {};
+  const ids = Object.keys(checks).sort(byNumKey);
+  const lbl = r.round_labels || {};
+  const rows = ids.map(id => {
+    const c = checks[id];
+    const skip = noJudge(r.meta.product, id);
+    const cell = k => {
+      const x = c[k] || {};
+      const ex = procExtras(x, true);
+      const v = skip ? ''
+              : x.value === true ? '적' : x.value === false ? '부' : '—';
+      return `${ex ? ex + '<br>' : ''}${v}`;
+    };
+    return `<tr><td>${c.proc || ''}</td><td>${c.item || ''}</td><td>${c.std || ''}</td>
+      <td style="text-align:center;">${cell('r1')}</td><td style="text-align:center;">${cell('r2')}</td>
+      <td>${c.action || ''}</td></tr>`;
+  }).join('');
+
+  printBase(r, '공정관리 점검일지', `
+    <table class="p-meta" style="margin-bottom:4mm;">
+      <tr><td class="lbl">제품군</td><td>${r.meta.product_label || '—'}</td><td class="lbl">제품명</td><td>${r.meta.product_name || '—'}</td></tr>
+    </table>
+    ${procLedgerItems(r).length ? `<table class="p-table p-tight"><thead><tr><th>생산 제품 (생산·물류일보)</th><th>LOT</th><th>수량</th><th>채널</th></tr></thead>
+      <tbody>${procLedgerItems(r).map(it => `<tr><td>${it.name || ''}${it.thaw && !/해동/.test(it.name || '') ? ' (해동)' : ''}</td><td style="text-align:center;">${it.lot || ''}</td><td style="text-align:right;">${it.qty ?? ''}</td><td style="text-align:center;">${it.ch || ''}</td></tr>`).join('')}</tbody></table>
+      ${procLedgerRawLots(r).length ? `<p style="font-size:8pt;margin-bottom:3mm;">원료 LOT: ${procLedgerRawLots(r).join(', ')}</p>` : ''}` : ''}
+    <table class="p-table"><thead><tr><th>공정명</th><th>관리항목</th><th>관리 기준</th>
+      <th>점검결과 ①${lbl.r1 ? `<br>${lbl.r1}` : ''}</th><th>점검결과 ②${lbl.r2 ? `<br>${lbl.r2}` : ''}</th><th>조치</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <p style="font-size:8pt;">※ 적합(양호) 적 · 부적합(불량) 부 · 해당사항 무 −</p>
+    ${photoStripPrint(r.photos && r.photos.stamp, '날인확인 (현물직인)')}
+    ${r.note ? `<div class="p-section">■ 비고</div><p>${r.note}</p>` : ''}
+    ${r.confirm_note ? `<div class="p-section">■ 확인</div><p>${r.confirm_note}</p>` : ''}`);
+}
+
+// ── 원재료 육안검사 일지 ──────────────────────────────────
+function renderMaterialRow(r) {
+  const n = (r.photos && r.photos.temp && r.photos.temp.length) || 0;
+  const photo = n ? `<span class="photo-cell-mark">📷 ${n}장</span>` : `<span class="photo-cell-none">—</span>`;
+  const res = r.result === 'ng' ? '<span class="fail">× 부적합</span>' : '<span class="ok">○ 적합</span>';
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.item_name || '—'}</td><td>${r.supplier || '—'}</td>
+    <td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td><td>${r.product_temp !== null && r.product_temp !== undefined ? r.product_temp + '℃' : '—'}</td>
+    <td>${photo}</td><td>${res}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function renderMaterialModal(r) {
+  const checks = r.checks || {};
+  const rows = MATERIAL_CHECK_ORDER.filter(k => checks[k]).map(k =>
+    `<tr><td class="lbl-col">${checks[k].label || k}</td><td style="text-align:center;">${OX_LABEL[checks[k].value] || '—'}</td></tr>`).join('');
+
+  const info = `
+    <tr><td class="lbl-col">입고일자</td><td>${r.meta.date}</td></tr>
+    <tr><td class="lbl-col">품명</td><td>${r.item_name || '—'}</td></tr>
+    <tr><td class="lbl-col">구입처명</td><td>${r.supplier || '—'}</td></tr>
+    <tr><td class="lbl-col">소비기한 / 제조년월일 / 품질유지기한</td><td>${r.expiry || '—'}</td></tr>
+    <tr><td class="lbl-col">입고량</td><td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td></tr>
+    <tr><td class="lbl-col">차량온도</td><td>${r.vehicle_temp !== null && r.vehicle_temp !== undefined ? r.vehicle_temp + '℃' : '—'}</td></tr>
+    <tr><td class="lbl-col">차량 또는 제품 품온</td><td><strong>${r.product_temp !== null && r.product_temp !== undefined ? r.product_temp + '℃' : '—'}</strong></td></tr>`;
+
+  const action = r.result === 'ng'
+    ? `<div class="alert-box"><h4>⚠ 부적합 시 조치 내용</h4><div>${r.action_note || '(미입력)'}</div></div>` : '';
+
+  return `<table class="detail-table">${info}</table>
+    <table class="detail-table"><thead><tr><th style="text-align:left;">육안검사 항목</th><th style="width:110px;">결과</th></tr></thead><tbody>${rows}</tbody></table>
+    <div style="margin-bottom:12px;font-size:15px;font-weight:bold;">적합여부: ${r.result === 'ng' ? '<span class="fail">× 부적합</span>' : '<span class="ok">○ 적합</span>'}</div>
+    ${action}`;
+}
+
+function printMaterial(r) {
+  const checks = r.checks || {};
+  const rows = MATERIAL_CHECK_ORDER.filter(k => checks[k]).map(k =>
+    `<tr><td>${checks[k].label || k}</td><td style="text-align:center;">${OX_TEXT[checks[k].value] || '—'}</td></tr>`).join('');
+  printBase(r, '원재료 육안검사 일지', `
+    <table class="p-meta" style="margin-bottom:4mm;">
+      <tr><td class="lbl">품명</td><td>${r.item_name || '—'}</td><td class="lbl">구입처</td><td>${r.supplier || '—'}</td></tr>
+      <tr><td class="lbl">입고량</td><td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td><td class="lbl">소비기한</td><td>${r.expiry || '—'}</td></tr>
+      <tr><td class="lbl">차량온도</td><td>${r.vehicle_temp ?? '—'}℃</td><td class="lbl">품온</td><td>${r.product_temp ?? '—'}℃</td></tr>
+    </table>
+    <table class="p-table"><thead><tr><th>육안검사 항목</th><th>결과</th></tr></thead><tbody>${rows}</tbody></table>
+    <p><b>적합여부: ${r.result === 'ng' ? '× 부적합' : '○ 적합'}</b></p>
+    <p style="font-size:8pt;">※ 적합 ○ · 부적합 × · 해당없음 −</p>
+    ${photoStripPrint(r.photos && r.photos.temp, '차량 또는 제품 품온 온도관리')}
+    ${r.action_note ? `<div class="p-section">■ 부적합 시 조치 내용</div><p>${r.action_note}</p>` : ''}`);
+}
+
+// ── 부자재 육안검사 일지 ──────────────────────────────────
+function renderSubmaterialRow(r) {
+  const res = r.result === 'ng' ? '<span class="fail">× 부적합</span>' : '<span class="ok">○ 적합</span>';
+  return `<td><strong>${r.meta.date}</strong>${r.meta.time ? ` <small style="color:#999;">${r.meta.time}</small>` : ''}</td>
+    <td>${r.item_name || '—'}</td><td>${r.supplier || '—'}</td><td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td>
+    <td>${res}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function renderSubmaterialModal(r) {
+  const checks = r.checks || {};
+  const rows = SUBMATERIAL_CHECK_ORDER.filter(k => checks[k]).map(k =>
+    `<tr><td class="lbl-col">${checks[k].label || k}</td><td style="text-align:center;">${OX_LABEL[checks[k].value] || '—'}</td></tr>`).join('');
+  const alert = r.result === 'ng'
+    ? `<div class="alert-box"><h4>⚠ 부적합사항 및 개선조치</h4>
+        <div class="alert-row"><div class="al">부적합사항</div><div class="ac">${r.defect_note || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">개선조치</div><div class="ac">${r.action_note || '(미입력)'}</div></div></div>` : '';
+  return `<table class="detail-table">
+      <tr><td class="lbl-col">입고일시</td><td>${r.meta.date} ${r.meta.time || ''}</td></tr>
+      <tr><td class="lbl-col">품명</td><td>${r.item_name || '—'}</td></tr>
+      <tr><td class="lbl-col">반입처</td><td>${r.supplier || '—'}</td></tr>
+      <tr><td class="lbl-col">수량</td><td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td></tr>
+    </table>
+    <table class="detail-table"><thead><tr><th style="text-align:left;">육안검사 항목</th><th style="width:110px;">결과</th></tr></thead><tbody>${rows}</tbody></table>
+    <div style="margin-bottom:12px;font-size:15px;font-weight:bold;">결과: ${r.result === 'ng' ? '<span class="fail">× 부적합</span>' : '<span class="ok">○ 적합</span>'}</div>${alert}`;
+}
+
+function printSubmaterial(r) {
+  const checks = r.checks || {};
+  const rows = SUBMATERIAL_CHECK_ORDER.filter(k => checks[k]).map(k =>
+    `<tr><td>${checks[k].label || k}</td><td style="text-align:center;">${OX_TEXT[checks[k].value] || '—'}</td></tr>`).join('');
+  printBase(r, '부자재 육안검사 일지', `
+    <table class="p-meta" style="margin-bottom:4mm;">
+      <tr><td class="lbl">입고일시</td><td>${r.meta.date} ${r.meta.time || ''}</td><td class="lbl">품명</td><td>${r.item_name || '—'}</td></tr>
+      <tr><td class="lbl">반입처</td><td>${r.supplier || '—'}</td><td class="lbl">수량</td><td>${r.qty_value ?? '—'} ${r.qty_unit || ''}</td></tr>
+    </table>
+    <table class="p-table"><thead><tr><th>육안검사 항목</th><th>결과</th></tr></thead><tbody>${rows}</tbody></table>
+    <p><b>결과: ${r.result === 'ng' ? '× 부적합' : '○ 적합'}</b></p>
+    ${r.defect_note ? `<div class="p-section">■ 부적합사항</div><p>${r.defect_note}</p>` : ''}
+    ${r.action_note ? `<div class="p-section">■ 개선조치</div><p>${r.action_note}</p>` : ''}`);
+}
+
+// ── 개인위생 점검표 ───────────────────────────────────────
+function renderPersonalHygieneRow(r) {
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector || '—'}</td><td>${alertCell(r.has_alert)}</td>
+    <td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function renderPersonalHygieneModal(r) {
+  const checks = r.checks || {};
+  const ids = Object.keys(checks).sort(byNumKey);
+  const rows = ids.map((id, idx) => {
+    const c = checks[id];
+    const skip = noJudge(r.meta.product, id);
+    let cells = '';
+    const prev = idx > 0 ? checks[ids[idx - 1]] : null;
+    if (!prev || prev.cat !== c.cat) {
+      let span = 1;
+      for (let j = idx + 1; j < ids.length && checks[ids[j]].cat === c.cat; j++) span++;
+      cells += `<td rowspan="${span}" style="background:#f7f9fc;font-weight:bold;color:#1a3a5c;font-size:11px;text-align:center;">${c.cat}</td>`;
+    }
+    cells += `<td style="font-size:12px;">${c.text || ''}${c.action ? `<div style="color:#c62828;font-size:10.5px;margin-top:3px;">조치: ${c.action}</div>` : ''}</td>`;
+    cells += `<td style="font-size:10.5px;text-align:center;color:#666;">${c.method || ''}<br>${c.cycle || ''}<br>${c.owner || ''}</td>`;
+    cells += `<td style="text-align:center;width:80px;">${OX_LABEL[c.value] || '—'}</td>`;
+    cells += `<td style="text-align:center;font-size:11px;">${c.sign || r.meta.inspector || ''}</td>`;
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  const etc = r.etc ? `<div class="notes-box"><div class="lbl">기타</div>${r.etc}</div>` : '';
+  return `<div style="overflow-x:auto;">
+    <table class="detail-table" style="font-size:12px;min-width:560px;">
+      <thead><tr><th style="width:90px;">관리항목</th><th style="text-align:left;">점검사항</th><th style="width:78px;">모니터링</th><th style="width:80px;">확인결과</th><th style="width:70px;">서명</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>${etc}`;
+}
+
+function printPersonalHygiene(r) {
+  const checks = r.checks || {};
+  const rows = Object.keys(checks).sort(byNumKey).map(id => {
+    const c = checks[id];
+    return `<tr><td>${c.cat || ''}</td><td>${c.text || ''}</td><td style="text-align:center;">${c.method || ''} / ${c.cycle || ''}</td>
+      <td style="text-align:center;">${OX_TEXT[c.value] || '—'}</td><td>${c.action || ''}</td><td style="text-align:center;">${c.sign || ''}</td></tr>`;
+  }).join('');
+  printBase(r, '개인위생 점검표', `
+    <table class="p-table"><thead><tr><th>관리항목</th><th>점검사항</th><th>모니터링</th><th>확인결과</th><th>이탈 시 조치사항</th><th>서명</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <p style="font-size:8pt;">※ 양호 ○ · 불량 ×</p>
+    ${r.etc ? `<div class="p-section">■ 기타</div><p>${r.etc}</p>` : ''}`);
+}
+
+// ── 운송차량 점검표 ───────────────────────────────────────
+function renderVehicleRow(r) {
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.kind_label || r.meta.kind || '—'}</td><td>${r.car_no || '—'}</td>
+    <td>${r.item_name || '—'}</td><td>${alertCell(r.has_alert)}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function renderVehicleModal(r) {
+  const items = r.items || {};
+  const rows = Object.keys(items).sort(byNumKey).map(k => {
+    const it = items[k];
+    const temp = it.temp !== null && it.temp !== undefined ? `${it.temp}℃` : '';
+    return `<tr><td class="lbl-col" style="font-size:12px;font-weight:normal;">${it.text || k}</td>
+      <td style="text-align:center;width:70px;">${temp || '—'}</td>
+      <td style="text-align:center;width:90px;">${OX_LABEL[it.value] || '—'}</td></tr>`;
+  }).join('');
+  const alert = r.has_alert
+    ? `<div class="alert-box"><h4>⚠ 관리기준 이탈사항 및 개선조치</h4>
+        <div class="alert-row"><div class="al">이탈사항</div><div class="ac">${r.deviation || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">개선 조치사항</div><div class="ac">${r.action_note || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">조치 결과</div><div class="ac">${r.action_result || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">조치 일자</div><div class="ac">${r.action_date || '(미입력)'}</div></div></div>` : '';
+  const note = r.note ? `<div class="notes-box"><div class="lbl">비고</div>${r.note}</div>` : '';
+  return `<table class="detail-table">
+      <tr><td class="lbl-col">구분</td><td>${r.meta.kind_label || '—'}</td></tr>
+      <tr><td class="lbl-col">차량번호</td><td>${r.car_no || '—'}</td></tr>
+      ${r.item_name ? `<tr><td class="lbl-col">품목</td><td>${r.item_name}</td></tr>` : ''}
+      ${r.qty_value !== null && r.qty_value !== undefined ? `<tr><td class="lbl-col">수량</td><td>${r.qty_value} ${r.qty_unit || ''}</td></tr>` : ''}
+    </table>
+    <table class="detail-table"><thead><tr><th style="text-align:left;">관리 기준 점검사항</th><th>온도</th><th>결과</th></tr></thead><tbody>${rows}</tbody></table>
+    ${note}${alert}`;
+}
+
+function printVehicle(r) {
+  const items = r.items || {};
+  const rows = Object.keys(items).sort(byNumKey).map(k => {
+    const it = items[k];
+    return `<tr><td>${it.text || k}</td><td style="text-align:center;">${it.temp !== null && it.temp !== undefined ? it.temp + '℃' : '—'}</td>
+      <td style="text-align:center;">${OX_TEXT[it.value] || '—'}</td></tr>`;
+  }).join('');
+  printBase(r, r.meta.kind_label || '운송차량 점검표', `
+    <table class="p-meta" style="margin-bottom:4mm;">
+      <tr><td class="lbl">차량번호</td><td>${r.car_no || '—'}</td><td class="lbl">품목</td><td>${r.item_name || '—'}</td></tr>
+      <tr><td class="lbl">수량</td><td colspan="3">${r.qty_value ?? '—'} ${r.qty_unit || ''}</td></tr>
+    </table>
+    <table class="p-table"><thead><tr><th>관리 기준 점검사항</th><th>온도</th><th>결과</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:8pt;">※ 양호 ○ · 불량 ×</p>
+    ${r.note ? `<div class="p-section">■ 비고</div><p>${r.note}</p>` : ''}
+    ${r.has_alert ? `<div class="p-section">■ 관리기준 이탈사항 / 개선 조치사항 / 조치 결과 / 조치 일자</div>
+      <table class="p-table"><thead><tr><th>이탈사항</th><th>개선 조치사항</th><th>조치 결과</th><th>조치 일자</th></tr></thead>
+      <tbody><tr><td>${r.deviation || ''}</td><td>${r.action_note || ''}</td><td>${r.action_result || ''}</td><td>${r.action_date || ''}</td></tr></tbody></table>` : ''}`);
+}
+
+// ── MF 산지직송 검품일지 (mf_inspection_log.html) ──────────
+const MF_JUDGE = { ok: '<span class="ok">적합</span>', ng: '<span class="fail">부적합</span>' };
+const mfItems = r => Object.keys(r.items || {}).sort(byNumKey).map(k => r.items[k]);
+const mfType = it => it.type === 'B' ? 'B 손질' : 'A 활·생물';
+const mfW = it => (it.wmin ?? '—') + ' / ' + (it.wmax ?? '—');
+const MF_CHECK_COLS = [['temp','품온'],['fresh','선도'],['alive','생존'],['wash','세척'],['trim','손질'],['weight','중량'],['pack','포장'],['label','표시'],['foreign','이물']];
+
+function renderMfRow(r) {
+  if (r.meta.status === 'draft') {
+    return `<td><strong>${r.meta.date}</strong></td><td>—</td><td>${r.item_count || mfItems(r).length}</td><td>—</td><td>—</td>
+      <td><span class="status-badge" style="background:#fff8e1;color:#8d6e00;">작성 대기</span></td><td>—</td>`;
+  }
+  const ng = r.ng_count || 0;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector || '—'}</td><td>${r.item_count || mfItems(r).length}</td>
+    <td>${ng ? `<span class="fail">${ng}</span>` : '0'}</td><td>${alertCell(r.has_alert)}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function renderMfModal(r) {
+  const list = mfItems(r);
+  const head = MF_CHECK_COLS.map(c => `<th style="width:38px;">${c[1]}</th>`).join('');
+  const rows = list.map(it => {
+    const ch = it.checks || {};
+    const cells = MF_CHECK_COLS.map(([id]) => `<td style="text-align:center;">${ch[id] ? (OX_TEXT[ch[id].value] || '—') : '<span style="color:#bbb;">/</span>'}</td>`).join('');
+    return `<tr><td style="font-size:12px;"><strong>${it.name}</strong>${it.thaw && !/해동/.test(it.name) ? ' <span style="color:#ad1457;font-size:10.5px;">(해동)</span>' : ''}
+        <div style="font-size:10.5px;color:#888;">${mfType(it)} · LOT ${it.lot || '—'} · 출고 ${it.qty ?? '—'} · 샘플 ${it.sample ?? '—'}${it.raw_lots ? ' · 원료 ' + it.raw_lots : ''}</div>
+        ${it.ng && it.ng.length ? `<div style="color:#c62828;font-size:10.5px;margin-top:2px;">× ${it.ng.join(', ')}</div>` : ''}</td>
+      ${cells}<td style="text-align:center;">${MF_JUDGE[it.judge] || '—'}</td></tr>`;
+  }).join('');
+  const alert = r.has_alert
+    ? `<div class="alert-box"><h4>⚠ 관리기준 이탈사항 및 개선조치</h4>
+        <div class="alert-row"><div class="al">이탈사항</div><div class="ac">${r.deviation || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">개선 조치사항</div><div class="ac">${r.action_note || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">조치 결과</div><div class="ac">${r.action_result || '(미입력)'}</div></div>
+        <div class="alert-row"><div class="al">조치 일자</div><div class="ac">${r.action_date || '(미입력)'}</div></div></div>` : '';
+  const note = r.note ? `<div class="notes-box"><div class="lbl">비고</div>${r.note}</div>` : '';
+  const draftBox = r.meta.status === 'draft'
+    ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#6d5600;line-height:1.6;">
+        📌 <b>작성 대기</b> — 일보 기준 출고품목만 미리 등록된 기록입니다. 검품 결과는 아직 입력되지 않았습니다.<br>
+        <a href="mf_inspection_log.html?date=${r.meta.date}" style="color:#1a3a5c;font-weight:bold;">→ 이 날짜 검품일지 작성하기</a></div>` : '';
+  return `${draftBox}<table class="detail-table">
+      <tr><td class="lbl-col">검품기준</td><td>${r.standard || 'WF-QC-104'} · 품온 0~10℃ · 중량 표시중량 이상 (○× 판정)</td></tr>
+      <tr><td class="lbl-col">품목 출처</td><td>${r.source || '—'}</td></tr>
+      <tr><td class="lbl-col">결과</td><td>${list.length}품목 중 적합 ${list.filter(i => i.judge === 'ok').length} · 부적합 <span class="${r.ng_count ? 'fail' : ''}">${r.ng_count || 0}</span></td></tr>
+    </table>
+    <table class="detail-table"><thead><tr><th style="text-align:left;">품목</th>${head}<th>판정</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:11px;color:#888;margin:-4px 0 10px;">○ 적합 · × 부적합 · / 해당없음 (생존: A 활·생물만, 손질: B 손질 제품만)</p>
+    ${note}${alert}`;
+}
+
+function printMf(r) {
+  const list = mfItems(r);
+  const rows = list.map((it, i) => {
+    const ch = it.checks || {};
+    const cells = MF_CHECK_COLS.map(([id]) => `<td style="text-align:center;">${ch[id] ? (OX_TEXT[ch[id].value] || '') : '/'}</td>`).join('');
+    return `<tr><td style="text-align:center;">${i + 1}</td><td>${it.name}${it.thaw && !/해동/.test(it.name) ? ' (해동)' : ''}${it.raw_lots ? ` <span style="font-size:6.5pt;color:#444;">· 원료 ${it.raw_lots}</span>` : ''}</td><td style="text-align:center;">${it.type || ''}</td>
+      <td style="text-align:center;">${it.lot || ''}</td><td style="text-align:center;">${it.qty ?? ''}</td><td style="text-align:center;">${it.sample ?? ''}</td>
+      ${cells}
+      <td style="text-align:center;">${it.judge === 'ok' ? '적합' : it.judge === 'ng' ? '부적합' : ''}</td></tr>`;
+  }).join('');
+  const ngRows = list.filter(it => it.ng && it.ng.length);
+  printBase(r, 'MF 산지직송 검품일지', `
+    <table class="p-meta" style="margin-bottom:3mm;">
+      <tr><td class="lbl">검품기준</td><td>${r.standard || 'WF-QC-104'} (품온 0~10℃ · 중량 표시중량 이상)</td><td class="lbl">결과</td><td>${list.length}품목 / 부적합 ${r.ng_count || 0}</td></tr>
+    </table>
+    <table class="p-table p-tight" style="font-size:7.5pt;"><thead><tr><th>No</th><th>품목</th><th>구분</th><th>LOT</th><th>출고</th><th>샘플</th>
+      ${MF_CHECK_COLS.map(c => `<th>${c[1]}</th>`).join('')}<th>판정</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:7.5pt;">※ 구분 A: 활·생물(세척만) / B: 손질 제품(비가식부위 손질 후 세척) · ○ 적합 × 부적합 / 해당없음 · 원료 LOT: 생산·물류일보(쿠팡 수불대장) 기준</p>
+    ${ngRows.length ? `<div class="p-section">■ 부적합 내용</div><table class="p-table"><tbody>${ngRows.map(it => `<tr><td style="width:35%;">${it.name}</td><td>${it.ng.join(', ')}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${r.note ? `<div class="p-section">■ 비고</div><p>${r.note}</p>` : ''}
+    ${r.has_alert ? `<div class="p-section">■ 관리기준 이탈사항 / 개선 조치사항 / 조치 결과 / 조치 일자</div>
+      <table class="p-table"><thead><tr><th>이탈사항</th><th>개선 조치사항</th><th>조치 결과</th><th>조치 일자</th></tr></thead>
+      <tbody><tr><td>${r.deviation || ''}</td><td>${r.action_note || ''}</td><td>${r.action_result || ''}</td><td>${r.action_date || ''}</td></tr></tbody></table>` : ''}`);
+}
+
+// ── 중요관리점(CCP) 검증점검표 ────────────────────────────
+function renderCcpRow(r) {
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector || '—'}</td><td>${alertCell(r.has_alert)}</td>
+    <td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+
+function ccpSectionOrder(sections) {
+  const known = CCP_SECTION_ORDER.filter(k => sections[k]);
+  return known.concat(Object.keys(sections).filter(k => known.indexOf(k) === -1));
+}
+
+function renderCcpModal(r) {
+  const sections = r.sections || {};
+  const body = ccpSectionOrder(sections).map(sk => {
+    const sec = sections[sk];
+    const qs = sec.questions || {};
+    const rows = Object.keys(qs).sort(byNumKey).map(qk => {
+      const q = qs[qk];
+      const extra = q.extra_label
+        ? `<div style="font-size:10.5px;color:#555;margin-top:4px;">${q.extra_label}: <strong>${q.extra_value || '(미기재)'}</strong></div>` : '';
+      const action = q.value === false && q.action
+        ? `<div style="color:#c62828;font-size:10.5px;margin-top:3px;">조치: ${q.action}</div>` : '';
+      return `<tr><td style="font-size:12px;">${q.text || qk}${extra}${action}</td>
+        <td style="text-align:center;width:80px;">${YN_LABEL(q.value)}</td></tr>`;
+    }).join('');
+    return `<p style="font-weight:bold;margin:10px 0 8px;font-size:13px;">▶ ${sec.label || sk}</p>
+      <table class="detail-table"><thead><tr><th style="text-align:left;">검증 내용</th><th style="width:80px;">기록</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+
+  const dev = (r.deviation || r.action_result || r.action_by || r.action_confirm)
+    ? `<div class="alert-box"><h4>⚠ 한계기준 이탈내용 / 개선조치 및 결과</h4>
+        <div class="alert-row"><div class="al">이탈내용</div><div class="ac">${r.deviation || '(해당없음)'}</div></div>
+        <div class="alert-row"><div class="al">개선조치 및 결과</div><div class="ac">${r.action_result || '(해당없음)'}</div></div>
+        <div class="alert-row"><div class="al">조치자 / 확인</div><div class="ac">${r.action_by || '—'} / ${r.action_confirm || '—'}</div></div></div>` : '';
+  return body + dev;
+}
+
+function printCcp(r) {
+  const sections = r.sections || {};
+  const body = ccpSectionOrder(sections).map(sk => {
+    const sec = sections[sk];
+    const qs = sec.questions || {};
+    const rows = Object.keys(qs).sort(byNumKey).map(qk => {
+      const q = qs[qk];
+      const extra = q.extra_label ? `<br><small>${q.extra_label}: ${q.extra_value || '(미기재)'}</small>` : '';
+      return `<tr><td>${q.text || qk}${extra}</td><td style="text-align:center;">${YN_TEXT(q.value)}</td><td>${q.action || ''}</td></tr>`;
+    }).join('');
+    return `<div class="p-section">■ ${sec.label || sk}</div>
+      <table class="p-table"><thead><tr><th>검증 내용</th><th>기록</th><th>조치</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+  printBase(r, '중요관리점(CCP) 검증점검표', `${body}
+    <div class="p-section">■ 한계기준 이탈내용 / 개선조치 및 결과</div>
+    <table class="p-table"><thead><tr><th>한계기준 이탈내용</th><th>개선조치 및 결과</th><th>조치자</th><th>확인</th></tr></thead>
+      <tbody><tr><td>${r.deviation || ''}</td><td>${r.action_result || ''}</td><td>${r.action_by || ''}</td><td>${r.action_confirm || ''}</td></tr></tbody></table>`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  상세보기에서 사진 첨부 (날인 직인 / 품온 온도계)
+//  이미 저장된 일지에 사진만 나중에 붙일 수 있게 함
+// ═══════════════════════════════════════════════════════════
+const PHOTO_FIELD = {
+  process:  { key: 'stamp', label: '날인확인 (현물직인)', hint: '포장지 현물 직인을 촬영해서 첨부하세요.' },
+  material: { key: 'temp',  label: '차량 또는 제품 품온 온도관리', hint: '온도계 화면을 촬영해서 첨부하세요.' },
+};
+const MAX_PHOTOS = 4;
+
+function compressImage(file, maxSide, quality) {
+  maxSide = maxSide || 900; quality = quality || 0.62;
+  return new Promise((resolve, reject) => {
+    if (!file.type || file.type.indexOf('image/') !== 0) { reject(new Error('이미지 파일이 아닙니다')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지를 열지 못했습니다'));
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = quality, url = c.toDataURL('image/jpeg', q);
+        while (url.length > 900 * 1024 && q > 0.35) { q -= 0.12; url = c.toDataURL('image/jpeg', q); }
+        resolve(url);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function photoList() {
+  const cfg = PHOTO_FIELD[currentTab];
+  const r = currentRecords[selectedId];
+  if (!cfg || !r) return [];
+  return (r.photos && r.photos[cfg.key]) || [];
+}
+
+function renderModalPhotos() {
+  const box = document.getElementById('modal-photos');
+  const cfg = PHOTO_FIELD[currentTab];
+  if (!cfg) { box.innerHTML = ''; return; }
+  const list = photoList();
+  box.innerHTML = `
+    <div class="photo-edit">
+      <div class="photo-edit-head">
+        <div class="photo-edit-title">📷 ${cfg.label} — ${list.length} / ${MAX_PHOTOS}장</div>
+        <label class="btn-photo-add" id="photo-add-btn">사진 촬영 / 선택
+          <input type="file" accept="image/*" capture="environment" multiple hidden onchange="addModalPhotos(this)">
+        </label>
+        <span class="photo-edit-status" id="photo-status"></span>
+      </div>
+      ${list.length
+        ? `<div class="photo-edit-grid">${list.map((src, i) => `
+            <div class="photo-edit-item">
+              <img src="${src}" alt="${cfg.label} ${i + 1}">
+              <button type="button" class="photo-edit-del" onclick="removeModalPhoto(${i})" aria-label="삭제">✕</button>
+            </div>`).join('')}</div>`
+        : `<div class="photo-edit-empty">첨부된 사진이 없습니다</div>`}
+      <div class="photo-edit-hint">${cfg.hint} 촬영하면 자동으로 압축(가로 900px)되어 <b>바로 저장</b>됩니다. 최대 ${MAX_PHOTOS}장.</div>
+    </div>`;
+  // 썸네일 클릭 시 원본 새 창
+  box.querySelectorAll('.photo-edit-item img').forEach((img, i) => {
+    img.onclick = () => { const w = window.open(); if (w) w.document.write(`<img src="${list[i]}" style="max-width:100%">`); };
+  });
+}
+
+function photoStatus(msg, cls) {
+  const el = document.getElementById('photo-status');
+  if (el) { el.textContent = msg; el.className = 'photo-edit-status ' + (cls || ''); }
+}
+
+async function addModalPhotos(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  const cfg = PHOTO_FIELD[currentTab];
+  const r = currentRecords[selectedId];
+  if (!cfg || !r) return;
+
+  const list = photoList().slice();
+  let skipped = 0;
+  document.getElementById('photo-add-btn').classList.add('busy');
+  photoStatus('사진 처리 중…');
+  for (const f of files) {
+    if (list.length >= MAX_PHOTOS) { skipped++; continue; }
+    try { list.push(await compressImage(f)); }
+    catch (e) { console.warn(e); photoStatus(e.message, 'err'); }
+  }
+  document.getElementById('photo-add-btn').classList.remove('busy');
+  if (skipped) photoStatus(`최대 ${MAX_PHOTOS}장까지만 첨부됩니다.`, 'err');
+  await persistPhotos(list, skipped ? null : `사진 ${list.length}장 저장 완료 ✓`);
+}
+
+async function removeModalPhoto(idx) {
+  if (!confirm('이 사진을 삭제할까요?')) return;
+  const list = photoList().slice();
+  list.splice(idx, 1);
+  await persistPhotos(list, '삭제 완료 ✓');
+}
+
+async function persistPhotos(list, okMsg) {
+  const cfg = PHOTO_FIELD[currentTab];
+  const r = currentRecords[selectedId];
+  if (!cfg || !r) return;
+  photoStatus('저장 중…');
+  try {
+    const res = await fetch(`${FIREBASE_URL}/${r._path}/${selectedId}/photos.json`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      // 빈 배열은 Firebase에서 노드 삭제(null)로 처리됨
+      body: JSON.stringify({ [cfg.key]: list.length ? list : null })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    r.photos = Object.assign({}, r.photos, { [cfg.key]: list });
+    renderModalPhotos();
+    photoStatus(okMsg || '저장 완료 ✓', 'ok');
+    setTimeout(() => photoStatus(''), 3000);
+  } catch (e) {
+    console.error(e);
+    renderModalPhotos();
+    photoStatus(isLocalFile() ? '파일을 직접 열어서 저장할 수 없습니다 — 인터넷 주소로 열어주세요.' : '저장 실패 — 인터넷 연결을 확인해주세요.', 'err');
+  }
+}
+
+// ── 결재 처리 ────────────────────────────────────────────
+async function approveRecord() {
+  const btn = document.getElementById('btn-approve');
+  btn.disabled = true; btn.textContent = '처리 중...';
+
+  const now = Date.now();
+  const patch = { reviewed: true, reviewed_at: now, confirmed_by: CONFIRMER };
+  const path = currentRecords[selectedId]._path;
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/${path}/${selectedId}/meta.json`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    currentRecords[selectedId].meta = { ...currentRecords[selectedId].meta, ...patch };
+    const at = new Date(now).toLocaleString('ko-KR');
+    document.getElementById('d-approve-info').innerHTML = `<strong>✔ 결재완료</strong> — ${CONFIRMER} (${at})`;
+    btn.textContent = '결재완료';
+
+    const statusFilter = document.querySelector('input[name="status"]:checked').value;
+    renderList(currentRecords);
+  } catch(e) {
+    alert(netErrorMsg(e));
+    btn.disabled = false; btn.textContent = '✔ 확인 완료';
+  }
+}
+
+// ── 엑셀(.xlsx) 다운로드 ───────────────────────────────────
+// 방역업체 보고서 작성용 — 방충방서 등 지원 탭에서만 버튼 노출됨 (TAB_CONFIG.exportFn 참고)
+function exportRecordExcel() {
+  const cfg = TAB_CONFIG[currentTab];
+  const r = currentRecords[selectedId];
+  if (!r || !cfg.exportFn) return;
+  cfg.exportFn(r);
+}
+
+// ── 인쇄 ─────────────────────────────────────────────────
+function printRecord() {
+  const cfg = TAB_CONFIG[currentTab];
+  const r = currentRecords[selectedId];
+  if (!r) return;
+  cfg.printFn(r);
+  window.print();
+}
+
+function printBase(r, title, bodyHtml) {
+  const writerName = r.meta.inspector || r.meta.writer || '—';
+  const reviewedStr = r.meta.reviewed
+    ? `결재완료 (${r.meta.confirmed_by||CONFIRMER}, ${new Date(r.meta.reviewed_at).toLocaleString('ko-KR')})`
+    : '미결재';
+  document.getElementById('print-area').innerHTML = `
+    <div class="p-title">${title}</div>
+    <div class="p-company">㈜위드프레쉬</div>
+    <table class="p-meta">
+      <tr><td class="lbl">점검일자</td><td>${r.meta.date}</td><td class="lbl">작성자</td><td>${writerName}</td></tr>
+      <tr><td class="lbl">결재상태</td><td colspan="3">${reviewedStr}</td></tr>
+    </table>
+    ${bodyHtml}
+    <div class="p-sign">
+      <div class="p-sign-box"><div class="p-sign-title">작성자</div><div class="p-sign-name">${writerName}</div><div class="p-sign-stamp">(인)</div></div>
+      <div class="p-sign-box"><div class="p-sign-title">확인자</div><div class="p-sign-name">${r.meta.reviewed ? (r.meta.confirmed_by||CONFIRMER) : ''}</div><div class="p-sign-stamp">(인)</div></div>
+    </div>`;
+}
+
+function printTemp(r) {
+  const EQUIP_ORDER = ['freezer','fridge1','fridge2','sauce'];
+  const rows = EQUIP_ORDER.map(eid => {
+    const eq = r.records?.[eid]; if (!eq) return '';
+    const cells = ['t1','t2','t3'].map(tk => {
+      const t = eq[tk];
+      const val = t?.temp !== null ? `${t.temp}℃` : '—';
+      const res = t?.result || '—';
+      return `<td>${val} / ${res}</td>`;
+    }).join('');
+    return `<tr><td>${eq.label}</td><td><small>${eq.standard}</small></td>${cells}</tr>`;
+  }).join('');
+  printBase(r, '냉장·냉동 온도기록지', `
+    <div class="p-section">■ 온도 점검현황</div>
+    <table class="p-table"><thead><tr><th>점검위치</th><th>기준</th><th>09~10시</th><th>13~14시</th><th>17~18시</th></tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function printHygiene(r) {
+  const checks = r.checks || {};
+  const meta = HYGIENE_META[r.meta.period] || Object.keys(checks).map(id => [id, r.meta.period, '']);
+
+  const rows = meta.map(([id, phase, category], idx) => {
+    const c = checks[id];
+    if (!c) return '';
+    const extraKeys = Object.keys(c).filter(k => !['text','value','action'].includes(k) && HYGIENE_EXTRA_LABELS[k]);
+    const extraTxt = extraKeys.map(k => `${HYGIENE_EXTRA_LABELS[k].label}: ${c[k] ?? '—'}${HYGIENE_EXTRA_LABELS[k].unit}`).join(' / ');
+    const v = c.value === true ? '예' : c.value === false ? '아니오' : (extraKeys.length ? '' : '—');
+
+    let cells = '';
+    const samePhase = idx > 0 && meta[idx-1][1] === phase;
+    if (!samePhase) {
+      let span = 1;
+      for (let j = idx+1; j < meta.length && meta[j][1] === phase; j++) span++;
+      cells += `<td rowspan="${span}" style="text-align:center;font-weight:bold;">${phase}</td>`;
+    }
+    const sameCat = idx > 0 && meta[idx-1][1] === phase && meta[idx-1][2] === category;
+    if (!sameCat) {
+      let span = 1;
+      for (let j = idx+1; j < meta.length && meta[j][1] === phase && meta[j][2] === category; j++) span++;
+      cells += `<td rowspan="${span}" style="text-align:center;">${category}</td>`;
+    }
+    cells += `<td>${c.text || id}</td>`;
+    cells += `<td style="text-align:center;">${v}${extraTxt ? `<br><small>${extraTxt}</small>` : ''}</td>`;
+    cells += `<td>${c.action||''}</td>`;
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  printBase(r, '일반위생관리 및 공정점검표', `
+    <table class="p-table"><thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th><th>조치</th></tr></thead><tbody>${rows}</tbody></table>
+    ${r.notes ? `<div class="p-section">■ 특이사항</div><p>${r.notes}</p>` : ''}`);
+}
+
+function printPest(r) {
+  const uvRows = r.uv_traps ? Object.values(r.uv_traps).map(t =>
+    `<tr><td>${t.name}</td><td>${t.loc}</td><td>${t['파리']||0}</td><td>${t['나방']||0}</td><td>${t['모기']||0}</td><td>${t['하루살이']||0}</td><td>${t['기타']||0}</td><td>${t['합계']||0}</td></tr>`).join('') : '';
+  const roachRows = r.roach_traps ? Object.values(r.roach_traps).map(t =>
+    `<tr><td>${t.name}</td><td>${t.loc}</td><td>${t['바퀴']||0}</td><td>${t['거미']||0}</td><td>${t['개미']||0}</td><td>${t['기타']||0}</td><td>${t['합계']||0}</td></tr>`).join('') : '';
+  const ratRows = r.rat_traps ? Object.values(r.rat_traps).map(t =>
+    `<tr><td>${t.name}</td><td>${t.loc}</td><td>${t['쥐']||0}</td><td>${t['기타']||0}</td><td>${t.status==='issue'?'이상':'정상'}</td></tr>`).join('') : '';
+  printBase(r, '방충·방서 점검표', `
+    <div class="p-section">■ 포충등 (비래해충)</div>
+    <table class="p-table"><thead><tr><th>설비명</th><th>위치</th><th>파리</th><th>나방</th><th>모기</th><th>하루살이</th><th>기타</th><th>합계</th></tr></thead><tbody>${uvRows}</tbody></table>
+    <div class="p-section">■ 바퀴트랩 (보행해충)</div>
+    <table class="p-table"><thead><tr><th>설비명</th><th>위치</th><th>바퀴</th><th>거미</th><th>개미</th><th>기타</th><th>합계</th></tr></thead><tbody>${roachRows}</tbody></table>
+    <div class="p-section">■ 쥐트랩 (설치류)</div>
+    <table class="p-table"><thead><tr><th>설비명</th><th>위치</th><th>쥐</th><th>기타</th><th>상태</th></tr></thead><tbody>${ratRows}</tbody></table>
+    ${r.deviation ? `<div class="p-section">■ 기준이탈</div><p>${r.deviation}</p>` : ''}
+    ${r.notes ? `<div class="p-section">■ 개선조치</div><p>${r.notes}</p>` : ''}`);
+}
+
+// ── 방충방서 엑셀(.xlsx) 다운로드 — 방역업체 제출용 ─────────
+// 실물 "방충·방서 점검표" 양식과 동일한 구성으로, 행/열마다 별도 셀에 데이터를 채워 넣는다
+// (텍스트를 한 셀에 몰아넣지 않고 설비명/위치/항목별 수치를 각각의 셀로 분리)
+function exportPestExcel(r) {
+  if (typeof XLSX === 'undefined') {
+    alert('엑셀 기능을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+  const aoa = [];
+  const merges = [];
+  const TITLE_COLS = 8; // 표 중 가장 넓은 포충등 표(8열) 기준으로 제목 줄을 병합
+
+  function pushTitle(text) {
+    const rowIdx = aoa.length;
+    const row = new Array(TITLE_COLS).fill('');
+    row[0] = text;
+    aoa.push(row);
+    merges.push({ s: { r: rowIdx, c: 0 }, e: { r: rowIdx, c: TITLE_COLS - 1 } });
+  }
+
+  pushTitle('방충·방서 점검표 — ㈜위드프레쉬');
+  aoa.push([
+    '점검일자', r.meta.date,
+    '점검자', r.meta.inspector || r.meta.writer || '-',
+    '확인자', r.meta.reviewed ? (r.meta.confirmed_by || CONFIRMER) : '(결재대기)',
+  ]);
+  aoa.push([]);
+
+  pushTitle('■ 포충등 (비래해충) — 포획수(마리)');
+  aoa.push(['설비명', '설치위치', '파리', '나방', '모기', '하루살이', '기타', '합계']);
+  Object.values(r.uv_traps || {}).forEach(t => {
+    aoa.push([t.name, t.loc, t['파리'] || 0, t['나방'] || 0, t['모기'] || 0, t['하루살이'] || 0, t['기타'] || 0, t['합계'] || 0]);
+  });
+  aoa.push([]);
+
+  pushTitle('■ 바퀴트랩 (보행해충) — 포획수(마리)');
+  aoa.push(['설비명', '설치위치', '바퀴', '거미', '개미', '기타', '합계']);
+  Object.values(r.roach_traps || {}).forEach(t => {
+    aoa.push([t.name, t.loc, t['바퀴'] || 0, t['거미'] || 0, t['개미'] || 0, t['기타'] || 0, t['합계'] || 0]);
+  });
+  aoa.push([]);
+
+  pushTitle('■ 쥐트랩 (설치류)');
+  aoa.push(['설비명', '설치위치', '쥐', '기타', '합계', '상태']);
+  Object.values(r.rat_traps || {}).forEach(t => {
+    aoa.push([t.name, t.loc, t['쥐'] || 0, t['기타'] || 0, t['합계'] || 0, t.status === 'issue' ? '이상' : '정상']);
+  });
+  aoa.push([]);
+
+  aoa.push(['기준이탈(원인파악)', r.deviation || '(해당없음)']);
+  aoa.push(['개선조치', r.notes || '(해당없음)']);
+  aoa.push([]);
+  aoa.push(['결재상태', r.meta.reviewed ? `결재완료 (${r.meta.confirmed_by || CONFIRMER})` : '미결재']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 9 }, { wch: 9 }];
+  ws['!merges'] = merges;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '방충방서점검표');
+  XLSX.writeFile(wb, `방충방서점검표_${r.meta.date}.xlsx`);
+}
+
+function printAirFilter(r) {
+  const rows = Object.values(r.items || {}).map(it =>
+    `<tr><td>${it.group} — ${it.name}</td><td style="text-align:center;">${AF_STATUS_LABEL[it.status]||'—'}</td><td>${it.note||''}</td></tr>`).join('');
+  printBase(r, 'Air Compressor 관리 점검표', `
+    <div class="p-section">■ 점검항목</div>
+    <table class="p-table"><thead><tr><th>점검항목</th><th>상태</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function printWaste(r) {
+  printBase(r, '폐기물 반출대장', `
+    <table class="p-meta" style="margin-bottom:5mm;">
+      <tr><td class="lbl">폐기물내역</td><td>${r.item||'—'}</td><td class="lbl">반출량</td><td>${r.qty_value||'—'} ${r.qty_unit||''}</td></tr>
+      <tr><td class="lbl">처리업체</td><td>${r.processor||'—'}</td><td class="lbl">세척·소독</td><td>${r.wash_status==='fail'?'부적합':'적합'}</td></tr>
+    </table>
+    ${r.note ? `<div class="p-section">■ 비고</div><p>${r.note}</p>` : ''}
+    ${r.action_note ? `<div class="p-section">■ 관리기준 이탈사항 및 조치</div><p>${r.action_note}</p>` : ''}`);
+}
+
+function printMsds(r) {
+  const isPurchase = (r.purchase_qty || 0) > 0;
+  printBase(r, '세척·소독제 수불대장', `
+    <table class="p-meta" style="margin-bottom:5mm;">
+      <tr><td class="lbl">제품명</td><td>${r.item_name||'—'} (${r.spec||''})</td><td class="lbl">제품용도</td><td>${r.purpose||'—'}</td></tr>
+      <tr><td class="lbl">구분</td><td>${isPurchase?'구매(입고)':'사용'}</td><td class="lbl">수량</td><td>${isPurchase?r.purchase_qty:r.usage_qty} ${r.unit||''}</td></tr>
+      <tr><td class="lbl">처리 후 재고</td><td colspan="3">${r.balance_after ?? '—'} ${r.unit||''}</td></tr>
+    </table>
+    ${r.note ? `<div class="p-section">■ 비고</div><p>${r.note}</p>` : ''}`);
+}
+</script>
+</body>
+</html>

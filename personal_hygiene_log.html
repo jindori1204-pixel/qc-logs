@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>개인위생 점검표 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+    .doc-meta { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+    .section-sub { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    /* 점검항목 카드 */
+    .chk-item { border: 1.5px solid #e6ebf1; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .chk-item:last-child { margin-bottom: 0; }
+    .chk-item.has-alert { border-color: #ffcdd2; background: #fff8f8; }
+    .chk-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+    .chk-cat { background: #1a3a5c; color: #fff; font-size: 11.5px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+    .chk-mon { font-size: 11px; color: #999; }
+    .chk-text { font-size: 12.5px; color: #3a3a3a; line-height: 1.6; margin-bottom: 11px; }
+
+    .ox-btns { display: flex; gap: 6px; }
+    .ox-btn { flex: 1; max-width: 120px; padding: 10px 0; border: 1.5px solid #ddd; border-radius: 7px; font-size: 14px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+    .ox-btn.ok.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .ox-btn.ng.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    .chk-action { display: none; margin-top: 11px; }
+    .chk-action.visible { display: block; }
+    .chk-action label { font-size: 11px; color: #c62828; font-weight: bold; display: block; margin-bottom: 5px; }
+    .chk-action textarea { width: 100%; padding: 8px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 12.5px; font-family: inherit; resize: vertical; min-height: 46px; background: #fff; }
+
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 66px; }
+
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 9pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast { display: none !important; }
+      .chk-item { border: 1px solid #999; border-radius: 0; margin-bottom: 4px; padding: 6px; page-break-inside: avoid; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>개인위생 점검표</h1>
+    <p>㈜위드프레쉬</p>
+    <div class="doc-meta">HACCP 관리기준서 · 문서번호 WF-내23-01/품질04 · 제정일자 2022.07.13</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full"><label>점검일자</label><input type="date" id="date"></div>
+      <div class="field"><label>작성자 (점검자)</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field"><label>검토자</label>
+        <select id="reviewer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+      <div class="field full"><label>승인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 점검항목 <span class="section-sub">양호 ○ · 불량 ×</span></div>
+    <div id="check-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">■ 기타</div>
+    <div class="notes-area"><textarea id="etc" placeholder="기타 특이사항을 입력하세요"></textarea></div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// ── 점검항목 (실물 "개인위생 점검표" 양식 순서·문구와 동일) ──
+const ITEMS = [
+  { id: 'h1', cat: '작업자 건강상태', text: '감기, 화농성 상처, 설사, 복통 증상이 있는 사람은 없는가?', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+  { id: 'h2', cat: '종업원 복장상태', text: '작업 복장 착용 상태 및 청결상태 — 위생복, 위생모, 위생장화, 마스크, 앞치마 등 작업 복장을 완벽히 착용하였으며 머리카락·식품잔사 등 제거 상태', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+  { id: 'h3', cat: '종업원 복장상태', text: '종업원 청결상태 — 손톱청결(매니큐어와 인조손톱 금지), 머리 청결상태, 짙은 화장과 향수 금지', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+  { id: 'h4', cat: '종업원 복장상태', text: '종업원 개인소지품 금지 — 담배, 볼펜, 휴대폰 등', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+  { id: 'h5', cat: '출입자(방문객 포함) 준수사항', text: '출입절차 준수 여부 / 에어샤워실 통과 여부 (에어샤워기 설치의 경우에 한함)', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+  { id: 'h6', cat: '출입자(방문객 포함) 준수사항', text: '손 세척 / 소독 준수 여부', method: '육안', cycle: '1회/일', owner: '품질 전혜진' },
+];
+
+document.getElementById('date').value = todayStr();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function renderChecks() {
+  document.getElementById('check-list').innerHTML = ITEMS.map(it => `
+    <div class="chk-item" id="row-${it.id}">
+      <div class="chk-head">
+        <span class="chk-cat">${it.cat}</span>
+        <span class="chk-mon">${it.method} · ${it.cycle} · ${it.owner}</span>
+      </div>
+      <div class="chk-text">${it.text}</div>
+      <div class="ox-btns">
+        <button type="button" class="ox-btn ok" id="ok-${it.id}" onclick="setOX('${it.id}','ok')">○ 양호</button>
+        <button type="button" class="ox-btn ng" id="ng-${it.id}" onclick="setOX('${it.id}','ng')">× 불량</button>
+      </div>
+      <div class="chk-action" id="action-row-${it.id}">
+        <label>⚠ 이탈 시 조치사항</label>
+        <textarea id="action-${it.id}" placeholder="조치 내용을 입력하세요"></textarea>
+      </div>
+    </div>`).join('');
+}
+
+function setOX(id, state) {
+  const ok = document.getElementById(`ok-${id}`);
+  const ng = document.getElementById(`ng-${id}`);
+  const already = state === 'ok' ? ok.classList.contains('active') : ng.classList.contains('active');
+  ok.classList.remove('active'); ng.classList.remove('active');
+  if (!already) (state === 'ok' ? ok : ng).classList.add('active');
+  const bad = ng.classList.contains('active');
+  document.getElementById(`row-${id}`).classList.toggle('has-alert', bad);
+  document.getElementById(`action-row-${id}`).classList.toggle('visible', bad);
+}
+
+function getOX(id) {
+  if (document.getElementById(`ok-${id}`).classList.contains('active')) return 'ok';
+  if (document.getElementById(`ng-${id}`).classList.contains('active')) return 'ng';
+  return null;
+}
+
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const reviewer = document.getElementById('reviewer').value;
+  const confirmer = document.getElementById('confirmer').value;
+
+  if (!date) { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('작성자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('승인자를 선택하세요.', 'error'); return; }
+
+  const checks = {};
+  let hasAlert = false;
+  ITEMS.forEach(it => {
+    const v = getOX(it.id);
+    if (v === 'ng') hasAlert = true;
+    const actionEl = document.getElementById(`action-${it.id}`);
+    checks[it.id] = {
+      cat: it.cat, text: it.text,
+      method: it.method, cycle: it.cycle, owner: it.owner,
+      value: v,
+      action: v === 'ng' && actionEl ? actionEl.value.trim() : '',
+      sign: inspector
+    };
+  });
+
+  const payload = {
+    meta: {
+      date, inspector, reviewer, confirmer,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    checks,
+    etc: document.getElementById('etc').value.trim(),
+    has_alert: hasAlert
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/personal_hygiene_logs/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type || ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+renderChecks();
+</script>
+</body>
+</html>

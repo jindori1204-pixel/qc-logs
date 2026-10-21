@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>위생점검일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 14px 14px 40px; }
+
+    .page-header { text-align: center; padding: 18px 0 14px; }
+    .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 14px; }
+
+    /* 기본정보 */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+    .field.full { grid-column: 1/-1; }
+
+    /* 주기 탭 */
+    .period-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .period-tab { flex: 1; min-width: 70px; padding: 10px 6px; border: 2px solid #ddd; border-radius: 8px; background: #fff; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; font-family: inherit; color: #888; transition: all .15s; }
+    .period-tab.active { border-color: #1a3a5c; background: #1a3a5c; color: #fff; }
+
+    /* 실물 양식과 동일한 "주기 | 관리 | 점검내용 | 기록" 표 구조 */
+    .scroll-hint { font-size: 11px; color: #aaa; text-align: right; margin-bottom: 4px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1.5px solid #ddd; border-radius: 8px; }
+    .chk-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 560px; }
+    .chk-table th { background: #2e5f8a; color: #fff; padding: 8px 4px; text-align: center; font-size: 11.5px; font-weight: bold; }
+    .chk-table td { padding: 8px 6px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; vertical-align: middle; }
+    .chk-table td:last-child { border-right: none; }
+    .chk-table tr:last-child > td { border-bottom: none; }
+    .chk-table th:nth-child(1), .chk-table td.col-period { width: 64px; text-align: center; font-weight: bold; color: #1a3a5c; font-size: 11.5px; background: #f7f9fc; }
+    .chk-table th:nth-child(2), .chk-table td.col-cat { width: 66px; text-align: center; font-size: 11.5px; color: #444; background: #fafcfe; }
+    .chk-table th:nth-child(3), .chk-table td.col-text { text-align: left; line-height: 1.45; color: #333; }
+    .chk-table th:nth-child(4), .chk-table td.col-record { width: 118px; text-align: center; }
+    .chk-table tr.has-alert > td.col-text { background: #fff8f8; }
+
+    .yn-btns { display: flex; gap: 4px; justify-content: center; }
+    .yn-btn { width: 38px; padding: 6px 0; border: 1.5px solid #ddd; border-radius: 5px; font-size: 11.5px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #888; }
+    .yn-btn.yes.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .yn-btn.no.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+
+    /* 기록칸 내 보조 입력 (해동시간 등) */
+    .rec-extra { margin-top: 6px; }
+    .rec-num-row { display: flex; align-items: center; justify-content: center; gap: 3px; }
+    .rec-num-row .num-input { width: 46px; padding: 4px 2px; border: 1.5px solid #ddd; border-radius: 5px; font-size: 11.5px; text-align: center; font-family: inherit; -moz-appearance: textfield; }
+    .rec-num-row .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .rec-num-row .num-unit { font-size: 10.5px; color: #888; }
+
+    /* 온도 4항목 (기록칸에 위치별로 세로 나열, 실물과 동일하게 예/아니오 없이 수치만) */
+    .rec-temps { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+    .rec-temp-row { display: flex; flex-direction: column; gap: 2px; }
+    .rec-temp-row .t-loc { font-size: 10px; color: #666; }
+    .rec-temp-row .t-input-wrap { display: flex; align-items: center; gap: 2px; }
+    .rec-temp-row .num-input { width: 44px; padding: 3px 2px; border: 1.5px solid #ddd; border-radius: 5px; font-size: 11px; text-align: center; font-family: inherit; -moz-appearance: textfield; }
+    .rec-temp-row .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .rec-temp-row .num-unit { font-size: 10px; color: #888; }
+
+    /* 날짜만 기록하는 항목 (CCP검증점검표 작성일, 자가품질검사 실시일, 금속검출기 점검일 등) */
+    .rec-date { width: 100%; padding: 5px 2px; border: 1.5px solid #ddd; border-radius: 5px; font-size: 11px; text-align: center; font-family: inherit; }
+    .rec-note { font-size: 9.5px; color: #888; margin-top: 4px; line-height: 1.3; }
+
+    /* 아니오 선택 시 조치사항 입력 행 */
+    tr.action-row td { background: #fff8f8; padding: 8px 10px; }
+    .alert-input label { font-size: 11px; color: #c62828; display: block; margin-bottom: 4px; font-weight: bold; }
+    .alert-input textarea { width: 100%; padding: 8px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 12.5px; font-family: inherit; resize: vertical; min-height: 46px; background: #fff; }
+
+    /* 특이사항 */
+    .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; }
+
+    /* 저장 버튼 */
+    .btn-save { width: 100%; padding: 16px; background: #1a3a5c; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 4px; }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    @media print {
+      body { background: #fff; font-size: 8pt; }
+      .container { max-width: 100%; padding: 0; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
+      .btn-save, .toast, .period-tabs, .scroll-hint { display: none !important; }
+      .chk-table { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>일반위생관리 및 공정점검표</h1>
+    <p>㈜위드프레쉬</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full">
+        <label>점검일자</label>
+        <input type="date" id="date">
+      </div>
+      <div class="field">
+        <label>점검자</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>확인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 주기 선택 -->
+  <div class="card">
+    <div class="section-title">■ 점검 주기</div>
+    <div class="period-tabs">
+      <button class="period-tab active" data-period="daily" onclick="switchPeriod('daily')">일일점검</button>
+      <button class="period-tab" data-period="weekly" onclick="switchPeriod('weekly')">주간점검</button>
+      <button class="period-tab" data-period="monthly" onclick="switchPeriod('monthly')">월간점검</button>
+      <button class="period-tab" data-period="quarterly" onclick="switchPeriod('quarterly')">분기점검</button>
+      <button class="period-tab" data-period="annual" onclick="switchPeriod('annual')">연간점검</button>
+    </div>
+
+    <div class="scroll-hint">← 좌우 스크롤</div>
+
+    <!-- 일일점검 (실물 양식과 동일: 주기|관리|점검내용|기록 한 표) -->
+    <div id="section-daily">
+      <div class="table-wrap">
+        <table class="chk-table">
+          <thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th></tr></thead>
+          <tbody id="tbody-daily"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 주간점검 -->
+    <div id="section-weekly" style="display:none">
+      <div class="table-wrap">
+        <table class="chk-table">
+          <thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th></tr></thead>
+          <tbody id="tbody-weekly"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 월간점검 -->
+    <div id="section-monthly" style="display:none">
+      <div class="table-wrap">
+        <table class="chk-table">
+          <thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th></tr></thead>
+          <tbody id="tbody-monthly"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 분기점검 -->
+    <div id="section-quarterly" style="display:none">
+      <div class="table-wrap">
+        <table class="chk-table">
+          <thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th></tr></thead>
+          <tbody id="tbody-quarterly"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 연간점검 -->
+    <div id="section-annual" style="display:none">
+      <div class="table-wrap">
+        <table class="chk-table">
+          <thead><tr><th>주기</th><th>관리</th><th>점검내용</th><th>기록</th></tr></thead>
+          <tbody id="tbody-annual"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 특이사항 -->
+  <div class="card">
+    <div class="section-title">■ 특이사항 및 개선조치</div>
+    <div class="notes-area">
+      <textarea id="notes" placeholder="특이사항, 기준이탈 내용 및 개선조치 결과를 입력하세요"></textarea>
+    </div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// ── 점검 항목 데이터 (실물 "일반위생관리 및 공정점검표" 양식과 동일한 순서·문구) ──
+// record 유형: 'yn'(기본, 예/아니오) | 'yn_number'(예/아니오 + 수치입력) |
+//              'temps'(예/아니오 없이 위치별 온도만) | 'yn_note'(예/아니오 + 안내문구) |
+//              'date'(예/아니오 없이 날짜만 기록)
+
+const ITEMS = {
+  before: [
+    { id: 'b1', phase: '일일(작업전)', category: '개인위생', text: '위생복장과 외출복장이 구분하여 보관되고 있는가?' },
+    { id: 'b2', phase: '일일(작업전)', category: '개인위생', text: '종사자의 건강상태가 양호하고 개인장신구 등을 소지하지 않으며, 청결한 위생복장을 착용하고 작업하고 있는가?' },
+    { id: 'b3', phase: '일일(작업전)', category: '개인위생', text: '위생설비(손세척기 등) 중 이상이 있는 것이 없으며, 종사자는 위생처리를 하고 입실하는가?' },
+    { id: 'b4', phase: '일일(작업전)', category: '설비',    text: '파손되거나 고장 난 제조설비가 없는가?' },
+    { id: 'b5', phase: '일일(작업전)', category: '검수',    text: '파손되거나 부적합한 포장재는 없는가?' },
+    { id: 'b6', phase: '일일(작업전)', category: '입고보관', text: '냉동창고의 온도가 적절히 관리되고 있는가? (냉장창고:0~10℃, 냉동창고:-18℃이하) [오전9시~10시]' },
+  ],
+  during: [
+    { id: 'd1',  phase: '일일(작업중)', category: '위생관리', text: '청결 구역 작업과 일반구역작업이 분리되어 있으며 오염되지 않도록 관리되고 있는가?' },
+    { id: 'd2',  phase: '일일(작업중)', category: '위생관리', text: '작업 중 손, 장갑, 작업도구 소독을 적절히 하고 있다.' },
+    { id: 'd3',  phase: '일일(작업중)', category: '위생관리', text: '작업장 및 화장실 출입 시 손 및 신발을 세척 또는 소독하고 있다.' },
+    { id: 'd4',  phase: '일일(작업중)', category: '위생관리', text: '작업 중 흡연, 음식물 섭취, 껌 씹는 행위를 하지 않는다.' },
+    { id: 'd5',  phase: '일일(작업중)', category: '공정관리', text: '해동실은 청결하고 해동상태는 적합한가? (해동방법: 유수해동, 해동시간 10~15분이내)',
+      record: 'yn_number', extra: { id: 'thaw_time', label: '시간', unit: 'min' } },
+    { id: 'd6',  phase: '일일(작업중)', category: '공정관리', text: '전처리 상태는 적합한가?' },
+    { id: 'd7',  phase: '일일(작업중)', category: '공정관리', text: '공정품 절단상태는 적합한가?' },
+    { id: 'd8',  phase: '일일(작업중)', category: '공정관리', text: '동결상태는 적합한가? (동결온도 -30℃ 이하, 동결시간 4시간이상)' },
+    { id: 'd9',  phase: '일일(작업중)', category: '공정관리', text: '계량 및 충진 상태는 적합한가?' },
+    { id: 'd10', phase: '일일(작업중)', category: '공정관리', text: '포장재 상태는 적합한가?' },
+    { id: 'd11', phase: '일일(작업중)', category: '공정관리', text: '청결구역과 일반구역의 온도는 적절히 관리되고 있는가?',
+      record: 'temps', extra: { fields: [
+        { id: 'temp_clean',   label: '청결구역' },
+        { id: 'temp_gen1',    label: '일반구역(제1전처리실)' },
+        { id: 'temp_thaw',    label: '일반구역(해동실)' },
+        { id: 'temp_simple',  label: '단순수산물가공구역' },
+      ]}
+    },
+    { id: 'd12', phase: '일일(작업중)', category: '공정관리', text: '포장기 청결상태는 적합한가?' },
+    { id: 'd13', phase: '일일(작업중)', category: '공정관리', text: '내포장 용기 보관상태는 적절한가?' },
+    { id: 'd14', phase: '일일(작업중)', category: '공정관리', text: '바닥에 이물이 있거나, 제품이 방치되어 있지 않은가?' },
+    { id: 'd15', phase: '일일(작업중)', category: '공정관리', text: '완제품의 포장 상태가 양호한가?' },
+    { id: 'd16', phase: '일일(작업중)', category: '공정관리', text: '모니터링장비(타이머 등)는 사용전후 세척소독을 실시하고 있는가?' },
+    { id: 'd17', phase: '일일(작업중)', category: '제품관리', text: '냉동창고와 소스냉장고 온도가 적절히 관리되고 있는가? [오후1시~2시]' },
+    { id: 'd18', phase: '일일(작업중)', category: '폐기물관리', text: '작업장 주변의 음식물폐기물은 잘 정리되어 보관되어지고 있고, 주기적으로 반출되고 있는가?' },
+  ],
+  after: [
+    { id: 'a1', phase: '일일(작업후)', category: '청소소독', text: '작업장 바닥, 배수로, 위생시설, 제조설비(식품과 직접 닿는 부분)의 청소·소독 상태는 양호한가?' },
+    { id: 'a2', phase: '일일(작업후)', category: '설비',     text: '파손되거나 고장 난 제조설비가 없는가?' },
+    { id: 'a3', phase: '일일(작업후)', category: '제품관리', text: '냉동창고와 소스냉장고 온도가 적절히 관리되고 있는가? [오후5시~5시30분]' },
+  ],
+  weekly: [
+    { id: 'w1',  phase: '주간', category: '청소소독', text: '작업장 천장, 벽, 바닥, 제조설비(제품과 직접 닿지 않는 부분)의 청소·소독을 실시하였으며, 청소·소독 상태는 양호하다.' },
+    { id: 'w2',  phase: '주간', category: '청소소독', text: '위생복장 등은 세탁 또는 세척·소독을 실시하였다.' },
+    { id: 'w3',  phase: '주간', category: '청소소독', text: '창고 내부 청소 상태는 양호하다.' },
+    { id: 'w4',  phase: '주간', category: '청소소독', text: '환풍기 필터, 방충망 등은 세척 되었는가?' },
+    { id: 'w5',  phase: '주간', category: '청소소독', text: '작업도구(제품과 직접 접촉하는)에 대한 세척 소독 상태는 양호한가?' },
+    { id: 'w6',  phase: '주간', category: '작업장',   text: '작업장 내 조명등의 고장이나 보호 커버가 파손되지 않았는가?' },
+    { id: 'w7',  phase: '주간', category: '작업장',   text: '작업장 내 문, 창문, 벽, 바닥 등은 파손되지 않았는가?' },
+    { id: 'w8',  phase: '주간', category: '작업장',   text: '작업장 내 탈의실, 화장실 등 설비는 파손되지 않았는가?' },
+    { id: 'w9',  phase: '주간', category: '작업장',   text: '위생장비 작동상태는 적절한가?' },
+    { id: 'w10', phase: '주간', category: '장비',     text: '제조설비는 녹이 나거나 작동하지 않는 제조설비는 없는가?' },
+    { id: 'w11', phase: '주간', category: '보관',     text: '보관창고는 청결하고 보관상태는 적절한가?' },
+  ],
+  monthly: [
+    { id: 'm1', phase: '월간', category: '청소', text: '작업장 전체 청소·소독 상태는 양호한가?' },
+    { id: 'm2', phase: '월간', category: '교육', text: '종업원 위생교육을 실시하였는가?' },
+    { id: 'm3', phase: '월간', category: '검증', text: '중요관리공정(CCP) 검증점검표를 작성하였는가?',
+      record: 'date', extra: { id: 'ccp_date', label: '작성일자', note: '기록은 CCP검증점검표 작성' } },
+  ],
+  quarterly: [
+    { id: 'q1', phase: '분기', category: '검사', text: '완제품에 대한 품질검사(자가품질검사)를 실시하였다.',
+      record: 'date', extra: { id: 'test_date', label: '실시일자' } },
+  ],
+  annual: [
+    { id: 'an1', phase: '연간', category: '점검검사', text: '저울, 타이머, 온도계는 검·교정하였는가?',
+      record: 'yn_note', extra: { note: '기록은 별도 일지 작성' } },
+    { id: 'an2', phase: '연간', category: '점검검사', text: '금속검출기에 대한 정기점검을 실시하였는가?',
+      record: 'date', extra: { id: 'metal_date', label: '점검일자' } },
+    { id: 'an3', phase: '연간', category: '점검검사', text: '정기검증(실시상황평가표 활용)을 실시하였는가?' },
+  ],
+};
+
+let currentPeriod = 'daily';
+
+// ── 오늘 날짜 기본값 ──
+document.getElementById('date').value = new Date().toISOString().slice(0,10);
+
+// ── 주기 전환 ──
+function switchPeriod(p) {
+  currentPeriod = p;
+  document.querySelectorAll('.period-tab').forEach(t => t.classList.toggle('active', t.dataset.period === p));
+  ['daily','weekly','monthly','quarterly','annual'].forEach(s => {
+    document.getElementById(`section-${s}`).style.display = s === p ? 'block' : 'none';
+  });
+}
+
+// ── 기록칸 렌더링 ──
+function renderRecordCell(item) {
+  const type = item.record || 'yn';
+
+  if (type === 'date') {
+    return `<input class="rec-date" type="date" id="${item.extra.id}">
+      ${item.extra.note ? `<div class="rec-note">${item.extra.note}</div>` : ''}`;
+  }
+
+  if (type === 'temps') {
+    return `<div class="rec-temps">${item.extra.fields.map(f => `
+      <div class="rec-temp-row">
+        <span class="t-loc">${f.label}</span>
+        <div class="t-input-wrap">
+          <input class="num-input" type="number" step="0.1" id="${f.id}" placeholder="0">
+          <span class="num-unit">℃</span>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  // yn / yn_number / yn_note 는 공통으로 예/아니오 버튼을 가짐
+  let extraHtml = '';
+  if (type === 'yn_number') {
+    extraHtml = `
+      <div class="rec-extra rec-num-row">
+        <span style="font-size:10.5px;color:#888;">${item.extra.label}</span>
+        <input class="num-input" type="number" id="${item.extra.id}" placeholder="0">
+        <span class="num-unit">${item.extra.unit}</span>
+      </div>`;
+  } else if (type === 'yn_note') {
+    extraHtml = `<div class="rec-note">${item.extra.note}</div>`;
+  }
+
+  return `
+    <div class="yn-btns">
+      <button class="yn-btn yes" id="yes-${item.id}" onclick="setYN('${item.id}')">예</button>
+      <button class="yn-btn no"  id="no-${item.id}"  onclick="setNo('${item.id}')">아니오</button>
+    </div>
+    ${extraHtml}`;
+}
+
+// ── 표 렌더링: 주기·관리 컬럼은 연속된 항목끼리 rowspan 병합 ──
+function renderTable(tbodyId, items) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+
+  items.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${item.id}`;
+
+    let cells = '';
+
+    // 주기 컬럼 (연속 동일 phase면 병합)
+    const samePhaseAsPrev = idx > 0 && items[idx-1].phase === item.phase;
+    if (!samePhaseAsPrev) {
+      let span = 1;
+      for (let j = idx+1; j < items.length && items[j].phase === item.phase; j++) span++;
+      cells += `<td class="col-period" rowspan="${span}">${item.phase}</td>`;
+    }
+
+    // 관리 컬럼 (연속 동일 category면 병합)
+    const sameCatAsPrev = idx > 0 && items[idx-1].phase === item.phase && items[idx-1].category === item.category;
+    if (!sameCatAsPrev) {
+      let span = 1;
+      for (let j = idx+1; j < items.length && items[j].phase === item.phase && items[j].category === item.category; j++) span++;
+      cells += `<td class="col-cat" rowspan="${span}">${item.category}</td>`;
+    }
+
+    cells += `<td class="col-text">${item.text}</td>`;
+    cells += `<td class="col-record">${renderRecordCell(item)}</td>`;
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+
+    // 아니오 선택 시 조치사항 입력 행 (기본 숨김)
+    if ((item.record || 'yn') !== 'date' && (item.record || 'yn') !== 'temps') {
+      const actionTr = document.createElement('tr');
+      actionTr.className = 'action-row';
+      actionTr.id = `action-row-${item.id}`;
+      actionTr.style.display = 'none';
+      actionTr.innerHTML = `<td colspan="4">
+        <div class="alert-input">
+          <label>⚠ 조치사항 — ${item.text}</label>
+          <textarea id="action-${item.id}" placeholder="조치 내용을 입력하세요"></textarea>
+        </div>
+      </td>`;
+      tbody.appendChild(actionTr);
+    }
+  });
+}
+
+// ── 예/아니오 선택 ──
+function setYN(id) {
+  document.getElementById(`yes-${id}`).classList.add('active');
+  document.getElementById(`no-${id}`).classList.remove('active');
+  document.getElementById(`row-${id}`).classList.remove('has-alert');
+  document.getElementById(`action-row-${id}`).style.display = 'none';
+}
+function setNo(id) {
+  document.getElementById(`yes-${id}`).classList.remove('active');
+  document.getElementById(`no-${id}`).classList.add('active');
+  document.getElementById(`row-${id}`).classList.add('has-alert');
+  document.getElementById(`action-row-${id}`).style.display = 'table-row';
+}
+
+// ── Firebase 저장 ──
+async function saveRecord() {
+  const date      = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+
+  if (!date)      { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('확인자를 선택하세요.', 'error'); return; }
+
+  const getResults = (items) => {
+    const result = {};
+    items.forEach(item => {
+      const type = item.record || 'yn';
+      const entry = { text: item.text };
+
+      if (type === 'date') {
+        const el = document.getElementById(item.extra.id);
+        entry.value = null;
+        entry[item.extra.id] = el && el.value ? el.value : null;
+      } else if (type === 'temps') {
+        entry.value = null;
+        item.extra.fields.forEach(f => {
+          const el = document.getElementById(f.id);
+          entry[f.id] = el && el.value ? parseFloat(el.value) : null;
+        });
+      } else {
+        const yesBtn = document.getElementById(`yes-${item.id}`);
+        const noBtn  = document.getElementById(`no-${item.id}`);
+        let value = null;
+        if (yesBtn && yesBtn.classList.contains('active')) value = true;
+        if (noBtn  && noBtn.classList.contains('active'))  value = false;
+        entry.value = value;
+        entry.action = '';
+        if (value === false) {
+          const actionEl = document.getElementById(`action-${item.id}`);
+          if (actionEl) entry.action = actionEl.value.trim();
+        }
+        if (type === 'yn_number') {
+          const el = document.getElementById(item.extra.id);
+          entry[item.extra.id] = el && el.value ? parseFloat(el.value) : null;
+        }
+      }
+      result[item.id] = entry;
+    });
+    return result;
+  };
+
+  const periodItems = {
+    daily:     [...ITEMS.before, ...ITEMS.during, ...ITEMS.after],
+    weekly:    ITEMS.weekly,
+    monthly:   ITEMS.monthly,
+    quarterly: ITEMS.quarterly,
+    annual:    ITEMS.annual,
+  };
+
+  const checks = getResults(periodItems[currentPeriod]);
+  const hasAlert = Object.values(checks).some(c => c.value === false);
+
+  const payload = {
+    meta: {
+      date, inspector, confirmer,
+      period: currentPeriod,
+      created_at: Date.now(),
+      reviewed: false, reviewed_at: null
+    },
+    checks,
+    notes: document.getElementById('notes').value.trim(),
+    has_alert: hasAlert
+  };
+
+  const [year, month] = date.split('-');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/hygiene_logs/${currentPeriod}/${year}/${month}.json`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크를 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '저 장 하 기';
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// ── 초기 렌더링 ──
+renderTable('tbody-daily',     [...ITEMS.before, ...ITEMS.during, ...ITEMS.after]);
+renderTable('tbody-weekly',    ITEMS.weekly);
+renderTable('tbody-monthly',   ITEMS.monthly);
+renderTable('tbody-quarterly', ITEMS.quarterly);
+renderTable('tbody-annual',    ITEMS.annual);
+</script>
+</body>
+</html>

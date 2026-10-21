@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>온도점검일지 — ㈜위드프레쉬</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      font-size: 15px; background: #f0f2f5; color: #222;
+    }
+
+    .container { max-width: 560px; margin: 0 auto; padding: 16px 14px 32px; }
+
+    /* 헤더 */
+    .page-header {
+      text-align: center; padding: 20px 0 16px;
+    }
+    .page-header h1 {
+      font-size: 20px; font-weight: bold; color: #1a3a5c;
+      letter-spacing: 1px;
+    }
+    .page-header p { font-size: 12px; color: #888; margin-top: 4px; }
+
+    /* 카드 */
+    .card {
+      background: #fff; border-radius: 12px; padding: 16px;
+      margin-bottom: 14px; box-shadow: 0 1px 5px rgba(0,0,0,.08);
+    }
+    .section-title {
+      font-size: 13px; font-weight: bold; color: #1a3a5c;
+      border-left: 4px solid #1a3a5c; padding-left: 8px;
+      margin-bottom: 14px;
+    }
+
+    /* 기본정보 */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%; padding: 11px 10px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 15px; font-family: inherit; color: #222;
+      background: #fff;
+    }
+    .field input:focus, .field select:focus {
+      border-color: #1a3a5c; outline: none;
+    }
+    .field.full { grid-column: 1 / -1; }
+
+    /* 설비 블록 */
+    .equip-block { margin-bottom: 14px; }
+    .equip-block:last-child { margin-bottom: 0; }
+
+    .equip-header {
+      background: #1a3a5c; color: #fff;
+      padding: 10px 14px; border-radius: 8px 8px 0 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .equip-header .equip-name { font-weight: bold; font-size: 14px; }
+    .equip-header .equip-std { font-size: 11px; opacity: .8; }
+
+    .time-rows {
+      border: 1.5px solid #ddd; border-top: none;
+      border-radius: 0 0 8px 8px; overflow: hidden;
+    }
+    .time-row {
+      display: grid; grid-template-columns: 72px 1fr 70px;
+      align-items: center; padding: 10px 12px; gap: 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .time-row:last-child { border-bottom: none; }
+
+    .time-label { font-size: 13px; color: #555; font-weight: 500; }
+
+    .temp-wrap { position: relative; }
+    .temp-input {
+      width: 100%; padding: 11px 28px 11px 10px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 17px; text-align: center; font-family: inherit;
+      -moz-appearance: textfield;
+    }
+    .temp-input::-webkit-inner-spin-button,
+    .temp-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .temp-input:focus { border-color: #1a3a5c; outline: none; }
+    .temp-unit {
+      position: absolute; right: 8px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px; color: #aaa; pointer-events: none;
+    }
+
+    .result-badge {
+      text-align: center; font-weight: bold; font-size: 13px;
+      padding: 8px 4px; border-radius: 8px;
+      background: #f0f0f0; color: #999;
+      transition: background .2s, color .2s;
+    }
+    .result-badge.ok { background: #e8f5e9; color: #2e7d32; }
+    .result-badge.fail { background: #ffebee; color: #c62828; }
+
+    /* 이상현황 */
+    .alert-section { display: none; }
+    .alert-section.visible { display: block; }
+
+    .alert-item {
+      background: #fff8f8; border: 1.5px solid #ffcdd2;
+      border-radius: 8px; padding: 12px; margin-bottom: 10px;
+    }
+    .alert-item:last-child { margin-bottom: 0; }
+    .alert-equip-label {
+      font-size: 13px; font-weight: bold; color: #c62828;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .alert-equip-label::before { content: '⚠'; }
+    .alert-item label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+    .alert-item textarea {
+      width: 100%; padding: 9px; border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px;
+    }
+    .alert-item textarea:focus { border-color: #c62828; outline: none; }
+
+    /* 버튼 */
+    .btn-save {
+      width: 100%; padding: 17px; background: #1a3a5c; color: #fff;
+      border: none; border-radius: 10px; font-size: 16px; font-weight: bold;
+      cursor: pointer; font-family: inherit; letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    .btn-save:active { background: #0f2540; }
+    .btn-save:disabled { background: #aab; cursor: not-allowed; }
+
+    /* 토스트 */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%); white-space: nowrap;
+      background: #333; color: #fff; padding: 12px 22px;
+      border-radius: 24px; font-size: 14px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+
+    /* ===== 인쇄 CSS ===== */
+    @media print {
+      body { background: #fff; font-size: 10pt; }
+      .container { max-width: 100%; padding: 0; }
+      .page-header h1 { font-size: 16pt; }
+      .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 10px; }
+      .btn-save, .toast { display: none !important; }
+      .equip-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .result-badge.ok, .result-badge.fail { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="page-header">
+    <h1>온도 점검 일지</h1>
+    <p>㈜위드프레쉬</p>
+  </div>
+
+  <!-- 기본정보 -->
+  <div class="card">
+    <div class="section-title">■ 기본정보</div>
+    <div class="info-grid">
+      <div class="field full">
+        <label>점검일자</label>
+        <input type="date" id="date">
+      </div>
+      <div class="field">
+        <label>점검자</label>
+        <select id="inspector">
+          <option value="">선택하세요</option>
+          <option value="전혜진 계장">전혜진 계장</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>확인자</label>
+        <select id="confirmer">
+          <option value="">선택하세요</option>
+          <option value="김현우 부장">김현우 부장</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 온도점검현황 -->
+  <div class="card">
+    <div class="section-title">■ 온도점검현황</div>
+    <div id="equip-list"></div>
+  </div>
+
+  <!-- 이상현황 (부적합 발생 시 자동 표시) -->
+  <div class="card alert-section" id="alert-section">
+    <div class="section-title">■ 이상현황 및 조치</div>
+    <div id="alert-list"></div>
+  </div>
+
+  <button class="btn-save" id="btn-save" onclick="saveRecord()">저 장 하 기</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+//  Firebase 설정 — 본인 프로젝트 ID로 교체
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+// =============================================
+
+// =============================================
+//  EmailJS 설정
+// =============================================
+const EMAILJS_SERVICE_ID  = 'service_gnoforb';
+const EMAILJS_TEMPLATE_ID = 'template_mn7rcwf';
+const EMAILJS_PUBLIC_KEY  = 'IaE-STUgSAuTW8kBN';
+// 리뷰.html 은 서버에 없어 링크가 깨져 있었음 (2026-09-08 확인) → review.html 로 수정
+const REVIEW_URL = 'review.html';
+emailjs.init(EMAILJS_PUBLIC_KEY);
+// =============================================
+
+// ── 설비 마스터 ──────────────────────────────
+const EQUIPMENTS = [
+  {
+    id: 'freezer',
+    label: '동결실',
+    type: '냉동',
+    standard: '-30℃ 이하',
+    stdType: 'max_only',
+    max: -30
+  },
+  {
+    id: 'fridge1',
+    label: '제1냉동창고',
+    type: '냉동',
+    standard: '-18℃ 이하',
+    stdType: 'max_only',
+    max: -18
+  },
+  {
+    id: 'fridge2',
+    label: '제2냉동창고',
+    type: '냉동',
+    standard: '-18℃ 이하',
+    stdType: 'max_only',
+    max: -18
+  },
+  {
+    id: 'sauce',
+    label: '소스냉장고',
+    type: '냉장',
+    standard: '0~10℃',
+    stdType: 'range',
+    min: 0,
+    max: 10
+  }
+];
+
+const TIME_SLOTS = ['09~10시', '13~14시', '17~18시'];
+
+// ── 초기화 ───────────────────────────────────
+document.getElementById('date').value = todayStr();
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── 설비 블록 렌더링 ─────────────────────────
+function renderEquipments() {
+  const container = document.getElementById('equip-list');
+  EQUIPMENTS.forEach(eq => {
+    const block = document.createElement('div');
+    block.className = 'equip-block';
+    block.innerHTML = `
+      <div class="equip-header">
+        <span class="equip-name">${eq.label}</span>
+        <span class="equip-std">기준: ${eq.standard}</span>
+      </div>
+      <div class="time-rows">
+        ${TIME_SLOTS.map((t, i) => `
+          <div class="time-row">
+            <span class="time-label">${t}</span>
+            <div class="temp-wrap">
+              <input class="temp-input" type="number" step="0.1"
+                inputmode="decimal" placeholder="—"
+                id="${eq.id}_t${i+1}"
+                oninput="onTempInput('${eq.id}', ${i+1})"
+              >
+              <span class="temp-unit">℃</span>
+            </div>
+            <div class="result-badge" id="${eq.id}_r${i+1}">—</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(block);
+  });
+}
+
+// ── 온도 입력 → 자동 판정 ────────────────────
+function isNormal(eq, val) {
+  if (eq.stdType === 'max_only') return val <= eq.max;
+  return val >= eq.min && val <= eq.max;
+}
+
+function onTempInput(equipId, slot) {
+  const eq = EQUIPMENTS.find(e => e.id === equipId);
+  const input = document.getElementById(`${equipId}_t${slot}`);
+  const badge = document.getElementById(`${equipId}_r${slot}`);
+  const val = parseFloat(input.value);
+
+  if (input.value === '' || isNaN(val)) {
+    badge.textContent = '—';
+    badge.className = 'result-badge';
+  } else if (isNormal(eq, val)) {
+    badge.textContent = '적합';
+    badge.className = 'result-badge ok';
+  } else {
+    badge.textContent = '부적합';
+    badge.className = 'result-badge fail';
+  }
+
+  updateAlerts();
+}
+
+// ── 이상현황 섹션 갱신 ────────────────────────
+function updateAlerts() {
+  const alertSection = document.getElementById('alert-section');
+  const alertList = document.getElementById('alert-list');
+
+  // 이전 조치 내용 보존
+  const prevActions = {};
+  EQUIPMENTS.forEach(eq => {
+    TIME_SLOTS.forEach((_, i) => {
+      const el = document.getElementById(`action_${eq.id}_${i+1}`);
+      if (el) prevActions[`${eq.id}_${i+1}`] = el.value;
+    });
+  });
+
+  // 부적합 항목 수집
+  const failItems = [];
+  EQUIPMENTS.forEach(eq => {
+    TIME_SLOTS.forEach((t, i) => {
+      const badge = document.getElementById(`${eq.id}_r${i+1}`);
+      if (badge && badge.textContent === '부적합') {
+        failItems.push({ eq, slot: i+1, time: t });
+      }
+    });
+  });
+
+  if (failItems.length === 0) {
+    alertSection.classList.remove('visible');
+    alertList.innerHTML = '';
+    return;
+  }
+
+  alertSection.classList.add('visible');
+  alertList.innerHTML = failItems.map(({ eq, slot, time }) => `
+    <div class="alert-item">
+      <div class="alert-equip-label">${eq.label} — ${time}</div>
+      <label>조치사항</label>
+      <textarea
+        id="action_${eq.id}_${slot}"
+        placeholder="조치 내용을 입력하세요"
+      >${prevActions[`${eq.id}_${slot}`] || ''}</textarea>
+    </div>
+  `).join('');
+}
+
+// ── Firebase 저장 ─────────────────────────────
+async function saveRecord() {
+  const date = document.getElementById('date').value;
+  const inspector = document.getElementById('inspector').value;
+  const confirmer = document.getElementById('confirmer').value;
+
+  if (!date) { showToast('점검일자를 입력하세요.', 'error'); return; }
+  if (!inspector) { showToast('점검자를 선택하세요.', 'error'); return; }
+  if (!confirmer) { showToast('확인자를 선택하세요.', 'error'); return; }
+
+  // 온도값 수집 및 빈값 체크
+  const records = {};
+  let allFilled = true;
+
+  EQUIPMENTS.forEach(eq => {
+    records[eq.id] = {
+      label: eq.label,
+      type: eq.type,
+      standard: eq.standard
+    };
+    TIME_SLOTS.forEach((t, i) => {
+      const input = document.getElementById(`${eq.id}_t${i+1}`);
+      const badge = document.getElementById(`${eq.id}_r${i+1}`);
+      const val = input.value === '' ? null : parseFloat(input.value);
+      if (val === null) allFilled = false;
+      records[eq.id][`t${i+1}`] = {
+        time: t,
+        temp: val,
+        result: badge.textContent
+      };
+    });
+  });
+
+  if (!allFilled) { showToast('모든 온도값을 입력하세요.', 'error'); return; }
+
+  // 이상현황 수집
+  const alerts = [];
+  let hasAlert = false;
+  EQUIPMENTS.forEach(eq => {
+    TIME_SLOTS.forEach((t, i) => {
+      if (records[eq.id][`t${i+1}`].result === '부적합') {
+        hasAlert = true;
+        const actionEl = document.getElementById(`action_${eq.id}_${i+1}`);
+        alerts.push({
+          equipment: eq.label,
+          time: t,
+          action: actionEl ? actionEl.value.trim() : ''
+        });
+      }
+    });
+  });
+
+  const [year, month] = date.split('-');
+
+  const payload = {
+    meta: {
+      date,
+      inspector,
+      confirmer,
+      created_at: Date.now(),
+      reviewed: false,
+      reviewed_at: null
+    },
+    records,
+    alerts,
+    has_alert: hasAlert
+  };
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(
+      `${FIREBASE_URL}/temperature_logs/${year}/${month}.json`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('저장 완료! ✓', 'success');
+
+    // ── 이메일 알림 발송 ──
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      date:           date,
+      inspector_name: inspector,
+      has_alert:      hasAlert ? '⚠ 이상있음' : '정상',
+      review_url:     REVIEW_URL
+    }).catch(err => console.warn('이메일 발송 실패:', err));
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패 — 네트워크 또는 Firebase URL을 확인하세요.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '저 장 하 기';
+  }
+}
+
+// ── 토스트 메시지 ─────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// ── 실행 ──────────────────────────────────────
+renderEquipments();
+</script>
+</body>
+</html>
