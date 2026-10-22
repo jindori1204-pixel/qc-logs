@@ -1635,52 +1635,73 @@ const CCPMON_LIMIT = {
   '1BC': '차아염소산나트륨 100~150ppm · 소독시간 5~6분 · 1회 소독량 10kg 이내 · 헹굼수량 350~400ℓ · 헹굼시간 30~45초 · 잔류염소 4ppm 이하 · 교체주기 300kg 이내',
   '2P': '냉장제품 Fe 3.0mmΦ·STS 5.0mmΦ 이상 불검출 / 냉동제품 Fe 2.5mmΦ·STS 4.0mmΦ 이상 불검출 (감도: 검출 ○ · 불검출 ×)',
 };
+// 개선조치 방법 (실물 양식 19~21 그대로 — ccp_monitor_log.html 과 동일)
+const CCPMON_ACTION = {
+  '1B': '◦ 기준이탈 시 세척횟수, 세척수량, 세척시간을 기준대로 재조정한 뒤 다시 세척을 실시한다.<br>◦ 세척공정이 완료되면 해당 제품 중 샘플을 선택하여 제품상태를 확인하고 이상 없을 경우 공정을 진행하고, 품질이 저하된 경우 해당 제품을 폐기한다.<br>◦ 세척수 교체주기를 이탈했을 경우 즉시 세척기준에 맞추어 재세척',
+  '1BC': '◦ 기준이탈 시 소독 및 헹굼작업을 중단하고 소독농도, 소독시간, 헹굼횟수, 헹굼수량, 헹굼시간을 기준대로 재조정한 뒤 다시 헹굼을 실시한다.<br>◦ 헹굼공정이 완료되면 해당 제품 중 샘플을 선택하여 제품상태를 확인하고 이상 없을 경우 공정을 진행하고, 품질이 저하된 경우 해당 제품을 폐기한다.<br>◦ 헹굼수 교체주기를 이탈했을 경우 즉시 헹굼기준에 맞추어 재헹굼을 실시한다.',
+  '2P': '○ 금속성 이물 검출 시<br>- 모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류하고 해당(이탈) 제품을 제거한다.<br>- 공정품에 혼입된 금속이물을 찾아내고, 그 출처를 조사하여 원인을 제거한다.<br>- 금속이물 검출 내역 및 개선조치 사항을 모니터링 일지에 기록<br>' +
+        '○ 감도 이상 발생 시<br>- 모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류한다.<br>- 감도를 재조정한 후 정상적으로 작동 시 재가동한다.<br>- 감도이상 발생 전부터 정상운전 확인시점까지 생산된 제품을 다시 검사한다.<br>- 재검사 후 그 내역 또는 개선조치 사항을 모니터링 일지에 기록<br>' +
+        '○ 기계적 고장 시<br>- 모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류한다.<br>- 수리 후 정상적으로 작동 시 재가동한다.<br>- 수리 불가능할 때에는 납품업체에 수리를 의뢰한다.<br>☆ 금속검출기의 고장으로 정상 운전 확인 이후에 생산된 제품과 금속검출기 미 통과제품에 대해서는 전량 검사대기품 표시(냉동보관)를 하여 금속검출기 수리 완료 후 전량 재통과한다.<br>' +
+        '○ 공통 : 개선조치 시<br>- 문제 발생 시 HACCP팀장에게 보고 후 조치하며, 개선조치 후 모니터링 일지에 기록 후 HACCP팀장에게 승인을 받는다.',
+};
 const ccpMonRows = r => Object.values(r.rows || {}).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 const ccpMonPasses = r => Object.values(r.passes || {}).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 const ccpMonOX = v => v === 'ok' ? '○' : v === 'ng' ? '×' : '';
 const ccpMonCell = (row, k) => k === 'dis' ? `${row.dis_min ?? ''}' ${row.dis_sec ?? ''}"` : (row[k] === 'ok' || row[k] === 'ng') ? ccpMonOX(row[k]) : (row[k] ?? '');
 
+const ccpDelStyle = x => x.deleted ? ' style="color:#aaa;text-decoration:line-through;"' : '';
+const ccpDelNote = x => x.deleted ? `<div style="color:#c62828;font-size:10.5px;text-decoration:none;">${/^수정/.test(x.deleted_reason || '') ? '' : '삭제: '}${x.deleted_reason || ''} (${x.deleted_by || ''})</div>` : '';
 function renderCcpMonRow(r) {
-  const rows = ccpMonRows(r), ng = rows.filter(x => x.judge === 'ng').length;
-  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.ccp_label || r.meta.ccp || '—'}</td><td>${rows.length}${r.passes ? ` / 통과 ${ccpMonPasses(r).length}` : ''}</td>
+  const rows = ccpMonRows(r).filter(x => !x.deleted), ng = rows.filter(x => x.judge === 'ng').length;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.ccp_label || r.meta.ccp || '—'}</td><td>${rows.length}${r.passes ? ` / 통과 ${ccpMonPasses(r).filter(x => !x.deleted).length}` : ''}</td>
     <td>${ng ? `<span class="fail">${ng}</span>` : '0'}</td><td>${r.meta.inspector || '—'}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+// 삭제·수정 전 기록: 일지 본문·인쇄에서는 빼고, 상세 맨 아래 접힌 "이력"에서만 확인
+function ccpMonHistory(r) {
+  const del = ccpMonRows(r).filter(x => x.deleted).map(x => ({ ...x, kind: '측정', when: x.time }))
+    .concat(ccpMonPasses(r).filter(x => x.deleted).map(x => ({ ...x, kind: '제품 통과', when: x.start })));
+  if (!del.length) return '';
+  return `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12.5px;color:#888;">삭제·수정 이력 ${del.length}건 (일지·인쇄에는 표시되지 않음)</summary>
+    <table class="detail-table" style="font-size:11.5px;margin-top:6px;"><thead><tr><th>구분</th><th style="text-align:left;">품명/원료명</th><th>시각</th><th style="text-align:left;">사유</th><th>처리자</th><th>처리시각</th></tr></thead><tbody>
+    ${del.map(x => `<tr><td style="text-align:center;">${x.kind}</td><td>${x.name || ''}</td><td style="text-align:center;">${x.when || ''}</td><td>${x.deleted_reason || ''}</td>
+      <td style="text-align:center;">${x.deleted_by || ''}</td><td style="text-align:center;">${x.deleted_at ? new Date(x.deleted_at).toLocaleString('ko-KR') : ''}</td></tr>`).join('')}</tbody></table></details>`;
 }
 function renderCcpMonModal(r) {
   const c = r.meta.ccp, cols = CCPMON_COLS[c] || [];
-  const rows = ccpMonRows(r);
+  const rows = ccpMonRows(r).filter(x => !x.deleted);
   const nameHead = c === '2P' ? '품명' : '원료명';
-  const body = rows.map(x => `<tr><td>${x.name || ''}<br><small style="color:#888;">${[x.storage, x.raw_lots ? 'LOT ' + x.raw_lots : ''].filter(Boolean).join(' · ')}</small></td><td style="text-align:center;">${x.time || ''}</td>
+  const body = rows.map(x => `<tr${ccpDelStyle(x)}><td>${x.name || ''}<br><small style="color:#888;">${[x.storage, x.raw_lots ? 'LOT ' + x.raw_lots : ''].filter(Boolean).join(' · ')}</small>${ccpDelNote(x)}</td><td style="text-align:center;">${x.time || ''}</td>
     ${cols.map(([k]) => `<td style="text-align:center;">${ccpMonCell(x, k)}</td>`).join('')}
     <td style="text-align:center;">${x.judge === 'ok' ? '<span class="ok">○</span>' : '<span class="fail">×</span>'}${x.deviations && x.deviations.length ? `<div style="font-size:10.5px;color:#c62828;">${x.deviations.join(', ')}</div>` : ''}</td>
     <td style="text-align:center;">${x.sign || ''}</td></tr>`).join('');
-  const passes = ccpMonPasses(r);
+  const passes = ccpMonPasses(r).filter(x => !x.deleted);
   const passTbl = passes.length ? `<div style="font-size:12.5px;font-weight:bold;color:#1a3a5c;margin:10px 0 6px;">■ 금속검출기 제품 통과</div>
     <table class="detail-table"><thead><tr><th style="text-align:left;">품명</th><th>최초통과</th><th>통과종료</th><th>검출량</th><th>이탈</th><th>특이사항</th></tr></thead><tbody>
-    ${passes.map(p => `<tr><td>${p.name || ''} <small style="color:#888;">(${p.storage || ''})</small></td><td style="text-align:center;">${p.start || ''}</td><td style="text-align:center;">${p.end || '—'}</td>
+    ${passes.map(p => `<tr${ccpDelStyle(p)}><td>${p.name || ''} <small style="color:#888;">(${p.storage || ''})</small>${ccpDelNote(p)}</td><td style="text-align:center;">${p.start || ''}</td><td style="text-align:center;">${p.end || '—'}</td>
       <td style="text-align:center;">${p.detect_qty ?? ''}</td><td style="text-align:center;">${p.deviation === true ? '<span class="fail">유</span>' : p.deviation === false ? '무' : ''}</td><td>${p.note || ''}</td></tr>`).join('')}</tbody></table>` : '';
   const dv = r.deviation || {};
   const devBox = (dv.text || dv.action) ? `<div class="alert-box"><h4>⚠ 한계기준 이탈 및 개선조치</h4>
     <div class="alert-row"><div class="al">이탈내용</div><div class="ac">${dv.text || '(미입력)'}</div></div>
-    <div class="alert-row"><div class="al">개선조치 및 결과</div><div class="ac">${dv.action || '(미입력)'}</div></div>
+    <div class="alert-row"><div class="al">개선조치 및 결과</div><div class="ac">${(dv.action || '(미입력)').replace(/\n/g, '<br>')}</div></div>
     <div class="alert-row"><div class="al">조치자</div><div class="ac">${dv.by || '(미입력)'}</div></div></div>` : '';
   return `<table class="detail-table"><tr><td class="lbl-col">한계기준</td><td>${CCPMON_LIMIT[c] || ''}</td></tr></table>
     <table class="detail-table" style="font-size:12px;"><thead><tr><th style="text-align:left;">${nameHead}</th><th>${c === '2P' ? '통과시간' : '측정시각'}</th>${cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead>
-    <tbody>${body || `<tr><td colspan="${cols.length + 4}" style="text-align:center;color:#aaa;">기록 없음</td></tr>`}</tbody></table>${passTbl}${devBox}`;
+    <tbody>${body || `<tr><td colspan="${cols.length + 4}" style="text-align:center;color:#aaa;">기록 없음</td></tr>`}</tbody></table>${passTbl}${devBox}${ccpMonHistory(r)}`;
 }
 function printCcpMon(r) {
   const c = r.meta.ccp, cols = CCPMON_COLS[c] || [];
-  const rows = ccpMonRows(r).map(x => `<tr><td>${x.name || ''}${x.storage ? ` (${x.storage})` : ''}${x.raw_lots ? `<br><span style="font-size:7pt;">LOT ${x.raw_lots}</span>` : ''}</td><td style="text-align:center;">${x.time || ''}</td>
+  const rows = ccpMonRows(r).filter(x => !x.deleted).map(x => `<tr><td>${x.name || ''}${x.storage ? ` (${x.storage})` : ''}${x.raw_lots ? `<br><span style="font-size:7pt;">LOT ${x.raw_lots}</span>` : ''}</td><td style="text-align:center;">${x.time || ''}</td>
     ${cols.map(([k]) => `<td style="text-align:center;">${ccpMonCell(x, k)}</td>`).join('')}<td style="text-align:center;">${x.judge === 'ok' ? '○' : '×'}</td><td style="text-align:center;">${x.sign || ''}</td></tr>`).join('');
-  const passes = ccpMonPasses(r);
+  const passes = ccpMonPasses(r).filter(x => !x.deleted);
   const dv = r.deviation || {};
   printBase(r, `중요관리점(${r.meta.ccp_label || c}) 모니터링일지`, `
     <table class="p-meta" style="margin-bottom:3mm;"><tr><td class="lbl">한계기준</td><td>${CCPMON_LIMIT[c] || ''}</td></tr></table>
     <table class="p-table"><thead><tr><th>${c === '2P' ? '품명' : '원료명'}</th><th>${c === '2P' ? '통과시간' : '측정시각'}</th>${cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead><tbody>${rows}</tbody></table>
     ${passes.length ? `<div class="p-section">■ 금속검출기 제품 통과</div><table class="p-table"><thead><tr><th>품명</th><th>최초통과시간</th><th>통과종료시간</th><th>검출량</th><th>이탈유무</th><th>특이사항</th></tr></thead>
       <tbody>${passes.map(p => `<tr><td>${p.name || ''} (${p.storage || ''})</td><td style="text-align:center;">${p.start || ''}</td><td style="text-align:center;">${p.end || ''}</td><td style="text-align:center;">${p.detect_qty ?? ''}</td><td style="text-align:center;">${p.deviation === true ? '유' : p.deviation === false ? '무' : ''}</td><td>${p.note || ''}</td></tr>`).join('')}</tbody></table>` : ''}
-    <div class="p-section">■ 한계기준 이탈 및 개선조치</div>
-    <table class="p-table"><thead><tr><th>한계기준 이탈내용</th><th>개선조치 및 결과</th><th>조치자</th></tr></thead>
-      <tbody><tr><td>${dv.text || ''}</td><td>${dv.action || ''}</td><td>${dv.by || ''}</td></tr></tbody></table>`);
+    <table class="p-table" style="font-size:7.5pt;"><tr><td style="width:18mm;text-align:center;font-weight:bold;background:#e8e8e8;">개선조치<br>방법</td><td>${CCPMON_ACTION[c] || ''}</td></tr></table>
+    <table class="p-table"><thead><tr><th>한계기준 이탈내용</th><th>개선조치 및 결과</th><th>조치자</th><th>확인</th></tr></thead>
+      <tbody><tr><td>${(dv.text || '').replace(/\n/g, '<br>')}</td><td>${(dv.action || '').replace(/\n/g, '<br>')}</td><td>${dv.by || ''}</td><td>${r.meta.reviewed ? (r.meta.confirmed_by || CONFIRMER) : ''}</td></tr></tbody></table>`);
 }
 
 function renderCcpRow(r) {

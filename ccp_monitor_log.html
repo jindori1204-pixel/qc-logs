@@ -43,6 +43,22 @@
     .chip .st { font-size: 11.5px; font-weight: bold; margin-left: 4px; }
     .chip .st.f { color: #1565c0; } .chip .st.c { color: #2e7d32; }
     .chip.on .st { color: #ffe082; }
+    /* 금속검출 품명 검색 드롭다운 */
+    .search-wrap { position: relative; margin-bottom: 4px; }
+    #prod-search { width: 100%; min-height: 54px; padding: 10px 14px; border: 2px solid #2e5f8a; border-radius: 10px; font-size: 17px; font-family: inherit; }
+    #prod-search:focus { outline: none; border-color: #1a3a5c; box-shadow: 0 0 0 3px rgba(46,95,138,.15); }
+    .dd { position: absolute; left: 0; right: 0; top: 58px; z-index: 50; max-height: 360px; overflow-y: auto; background: #fff; border: 1.5px solid #c9d5e2; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .dd button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px; padding: 8px 14px; border: none; border-bottom: 1px solid #eef1f4; background: #fff; text-align: left; font-family: inherit; font-size: 15.5px; color: #222; cursor: pointer; }
+    .dd button:last-child { border-bottom: none; }
+    .dd button:active, .dd button:hover { background: #eaf1f8; }
+    .dd .nm { flex: 1; min-width: 0; }
+    .dd mark { background: #fff3c4; color: inherit; padding: 0; }
+    .dd .tag { font-size: 11.5px; font-weight: bold; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .dd .tag.f { background: #e3f2fd; color: #1565c0; } .dd .tag.c { background: #e8f5e9; color: #2e7d32; }
+    .dd .tag.t { background: #fff3e0; color: #e65100; }
+    .dd .none { padding: 14px; color: #999; font-size: 14px; }
+    .picked { margin-top: 8px; padding: 10px 14px; border-radius: 10px; background: #1a3a5c; color: #fff; font-size: 15.5px; font-weight: bold; }
+    .picked small { font-weight: normal; color: #ffe082; margin-left: 6px; }
     .lg-msg { font-size: 12.5px; color: #666; margin-bottom: 10px; line-height: 1.5; }
     .lg-msg.warn { color: #8d6e00; }
     .manual { display: flex; gap: 8px; margin-top: 10px; }
@@ -84,6 +100,17 @@
     .o { color: #2e7d32; font-weight: bold; } .x { color: #c62828; font-weight: bold; }
     .empty { text-align: center; color: #aaa; padding: 18px 0; font-size: 13.5px; }
     .btn-mini { min-height: 38px; padding: 0 10px; border: 1.5px solid #2e5f8a; border-radius: 6px; background: #fff; color: #2e5f8a; font-weight: bold; font-family: inherit; cursor: pointer; }
+    .btn-del { min-height: 38px; padding: 0 12px; border: 1.5px solid #c62828; border-radius: 6px; background: #fff; color: #c62828; font-weight: bold; font-family: inherit; cursor: pointer; }
+    .btn-del.big { min-height: 48px; padding: 0 22px; background: #c62828; color: #fff; }
+    tr.deleted td { color: #aaa; text-decoration: line-through; }
+    tr.deleted td:last-child { text-decoration: none; }
+    .dlg-back { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 900; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .dlg { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 440px; }
+    .dlg-title { font-size: 17px; font-weight: bold; color: #c62828; margin-bottom: 6px; }
+    .dlg-what { font-size: 14px; color: #333; margin-bottom: 12px; }
+    .dlg-note { font-size: 12px; color: #888; margin: 8px 0 14px; line-height: 1.5; }
+    .dlg-btns { display: flex; justify-content: flex-end; gap: 8px; }
+    .dlg-btns .btn-mini { min-height: 48px; padding: 0 20px; }
     .lock { background: #e8f5e9; color: #2e7d32; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
     .btn-save { min-height: 50px; padding: 0 20px; border: none; border-radius: 10px; background: #2e5f8a; color: #fff; font-size: 15px; font-weight: bold; font-family: inherit; cursor: pointer; margin-top: 10px; }
 
@@ -128,6 +155,11 @@
   <div class="card">
     <div class="section-title"><span id="prod-title">① 품명 선택</span> <span class="section-sub" id="prod-sub">김현우 부장 생산·물류일보 기준</span></div>
     <div class="lg-msg" id="prod-msg">일보 불러오는 중…</div>
+    <div class="search-wrap" id="search-wrap" hidden>
+      <input id="prod-search" type="search" autocomplete="off" placeholder="🔍 제품명 첫 단어 입력 (예: 꽃게, 오징어, 곰곰)" oninput="openDropdown()" onfocus="openDropdown()">
+      <div class="dd" id="prod-dd" hidden></div>
+      <div class="picked" id="picked" hidden></div>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="manual">
       <input id="manual-name" placeholder="목록에 없으면 직접 입력">
@@ -163,10 +195,22 @@
 
   <div class="card">
     <div class="section-title">한계기준 이탈 및 개선조치</div>
+    <div class="limit" id="action-guide" style="margin-bottom:10px;"></div>
+    <div class="lg-msg" style="margin-bottom:6px;">이탈 상황을 누르면 개선조치 방법이 아래 칸에 들어갑니다. 실제 조치 결과를 덧붙여 저장하세요.</div>
+    <div class="chips" id="action-btns" style="margin-bottom:12px;"></div>
     <div class="field" style="margin-bottom:10px;"><label for="dev-text">한계기준 이탈내용</label><textarea id="dev-text" placeholder="예) 10:30 2차 세척시간 15초 (기준 20초 이상)"></textarea></div>
-    <div class="field" style="margin-bottom:10px;"><label for="dev-action">개선조치 및 결과</label><textarea id="dev-action" placeholder="예) 세척시간 재조정 후 재세척, 샘플 확인 이상 없음"></textarea></div>
+    <div class="field" style="margin-bottom:10px;"><label for="dev-action">개선조치 및 결과</label><textarea id="dev-action" style="min-height:110px;" placeholder="위 이탈 상황 버튼을 누르거나 직접 입력 — 실제 조치 결과까지 적어 주세요"></textarea></div>
     <div class="field"><label for="dev-by">조치자</label><input id="dev-by"></div>
     <button class="btn-save" onclick="saveDeviation()">이탈·개선조치 저장</button>
+  </div>
+</div>
+<div class="dlg-back" id="del-dialog" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="del-title">
+    <div class="dlg-title" id="del-title">이 기록을 삭제할까요?</div>
+    <div class="dlg-what" id="del-what"></div>
+    <div class="field"><label for="del-reason" id="del-label">삭제 사유 (필수)</label><input id="del-reason"></div>
+    <div class="dlg-note" id="del-note"></div>
+    <div class="dlg-btns"><button class="btn-mini" onclick="closeDelete()">취소</button><button class="btn-del big" id="del-ok" onclick="confirmDelete()">삭제</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -252,6 +296,46 @@ const CCPS = {
   },
 };
 
+// ── 개선조치 방법 (실물 양식 19~21 그대로) ──
+const ACTIONS = {
+  '1B': [
+    { t: '기준 이탈 시', s: ['기준이탈 시 세척횟수, 세척수량, 세척시간을 기준대로 재조정한 뒤 다시 세척을 실시한다.',
+      '세척공정이 완료되면 해당 제품 중 샘플을 선택하여 제품상태를 확인하고 이상 없을 경우 공정을 진행하고, 품질이 저하된 경우 해당 제품을 폐기한다.'] },
+    { t: '세척수 교체주기 이탈 시', s: ['세척수 교체주기를 이탈했을 경우 즉시 세척기준에 맞추어 재세척'] },
+  ],
+  '1BC': [
+    { t: '기준 이탈 시', s: ['기준이탈 시 소독 및 헹굼작업을 중단하고 소독농도, 소독시간, 헹굼횟수, 헹굼수량, 헹굼시간을 기준대로 재조정한 뒤 다시 헹굼을 실시한다.',
+      '헹굼공정이 완료되면 해당 제품 중 샘플을 선택하여 제품상태를 확인하고 이상 없을 경우 공정을 진행하고, 품질이 저하된 경우 해당 제품을 폐기한다.'] },
+    { t: '헹굼수 교체주기 이탈 시', s: ['헹굼수 교체주기를 이탈했을 경우 즉시 헹굼기준에 맞추어 재헹굼을 실시한다.'] },
+  ],
+  '2P': [
+    { t: '금속성 이물 검출 시', s: ['모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류하고 해당(이탈) 제품을 제거한다.',
+      '공정품에 혼입된 금속이물을 찾아내고, 그 출처를 조사하여 원인을 제거한다.',
+      '금속이물 검출 내역 및 개선조치 사항을 모니터링 일지에 기록'] },
+    { t: '감도 이상 발생 시', s: ['모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류한다.',
+      '감도를 재조정한 후 정상적으로 작동 시 재가동한다.',
+      '감도이상 발생 전부터 정상운전 확인시점까지 생산된 제품을 다시 검사한다.',
+      '재검사 후 그 내역 또는 개선조치 사항을 모니터링 일지에 기록'] },
+    { t: '기계적 고장 시', s: ['모니터링 담당자는 즉시 금속검출기의 작업을 중지하고 공정품을 보류한다.',
+      '수리 후 정상적으로 작동 시 재가동한다.',
+      '수리 불가능할 때에는 납품업체에 수리를 의뢰한다.',
+      '☆ 금속검출기의 고장으로 정상 운전 확인 이후에 생산된 제품과 금속검출기 미 통과제품에 대해서는 전량 검사대기품 표시(냉동보관)를 하여 금속검출기 수리 완료 후 전량 재통과한다.'] },
+  ],
+};
+const ACTION_COMMON = '공통: 문제 발생 시 HACCP팀장에게 보고 후 조치하며, 개선조치 후 모니터링 일지에 기록 후 HACCP팀장에게 승인을 받는다.';
+function renderActionGuide() {
+  const list = ACTIONS[ccp];
+  $('action-guide').innerHTML = '<b>개선조치 방법</b><br>' + list.map(a => `○ <b>${a.t}</b><br>${a.s.map(x => (x.startsWith('☆') ? '' : '- ') + x).join('<br>')}`).join('<br>')
+    + (ccp === '2P' ? `<br>○ <b>공통 : 개선조치 시</b><br>- ${ACTION_COMMON.replace('공통: ', '')}` : '');
+  $('action-btns').innerHTML = list.map((a, i) => `<button class="chip" onclick="insertAction(${i})">${a.t}</button>`).join('');
+}
+function insertAction(i) {
+  const a = ACTIONS[ccp][i], el = $('dev-action');
+  const txt = `[${a.t}] ` + a.s.join(' ') + (ccp === '2P' ? ' ' + ACTION_COMMON.replace('공통: ', '') : '') + '\n→ 조치 결과: ';
+  el.value = (el.value.trim() ? el.value.trim() + '\n' : '') + txt;
+  el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+}
+
 let ccp = '1B', REC = null, PICK = null, ENTRY = {}, PASS_DEV = null;
 let LEDGER_OUT = null;
 let RAW_NAMES = null;   // 일보 names: 원료코드 → 원료명
@@ -297,8 +381,11 @@ function switchCcp(c) {
   $('prod-title').textContent = c === '2P' ? '① 품명 선택' : '① 원료명 선택';
   $('prod-sub').textContent = c === '2P' ? '생산·물류일보 완제품 기준' : c === '1BC' ? '생산·물류일보 · 게장(절임류) 투입 원료' : '생산·물류일보 · 투입 원료 (게장 원료 제외)';
   $('manual-st').hidden = c !== '2P';
+  $('search-wrap').hidden = c !== '2P';
+  $('chips').hidden = c === '2P';
+  $('prod-search').value = ''; $('prod-dd').hidden = true; $('picked').hidden = true;
   $('manual-name').placeholder =c === '2P' ? '목록에 없으면 품명 직접 입력' : '목록에 없으면 원료명 직접 입력 (예: 꽃게)';
-  renderEntry(); loadProducts(); loadRecord();
+  renderActionGuide(); renderEntry(); loadProducts(); loadRecord();
 }
 
 // ── 품명: 생산·물류일보 ──
@@ -336,7 +423,7 @@ async function loadProducts() {
       const d = await fetch(`${LEDGER_URL}/쿠팡수불/out.json`).then(r => r.json());
       LEDGER_OUT = (Array.isArray(d) ? d : Object.values(d || {})).filter(Boolean);
     }
-    if (!RAW_NAMES && ccp !== '2P') {
+    if (!RAW_NAMES) {
       const d = await fetch(`${LEDGER_URL}/쿠팡수불/names.json`).then(r => r.json());
       RAW_NAMES = {}; (Array.isArray(d) ? d : Object.values(d || {})).forEach(x => { if (Array.isArray(x)) RAW_NAMES[x[0]] = x[1]; });
     }
@@ -378,6 +465,13 @@ async function loadProducts() {
                         : '해당 품목이 없습니다. 직접 입력하세요.';
     }
     if (seq !== loadSeq) return;
+    if (ccp === '2P') {   // 금속검출: 제품 기준정보 전체를 검색 드롭다운으로 (오늘 생산 제품 먼저)
+      buildMaster(toList(LEDGER_OUT.filter(o => o.date === date)));
+      $('prod-msg').className = 'lg-msg';
+      $('prod-msg').textContent = `제품 기준정보 ${MASTER.length}개 · 오늘(${date}) 생산 ${MASTER.filter(p => p.today).length}개 — 검색창에 제품명 첫 단어를 입력하고 목록에서 고르세요.`;
+      $('chips').innerHTML = '';
+      return;
+    }
     if (ccp !== '2P') msg = msg.replace('일보 품목', '일보 원료').replace('공정 품목이', '공정 원료가').replace('생산 품목을', '투입 원료를').replace('품명을', '원료명을').replace('해당 품목', '해당 원료');
     $('prod-msg').className = 'lg-msg' + (warn ? ' warn' : '');
     $('prod-msg').textContent = msg;
@@ -389,6 +483,51 @@ async function loadProducts() {
     $('prod-msg').className = 'lg-msg warn'; $('prod-msg').textContent = '일보를 불러오지 못했습니다 — 품명을 직접 입력하세요.';
   }
 }
+// ── 금속검출 품명: 제품 기준정보(일보 제품 마스터) 검색 드롭다운 ──
+let MASTER = [];
+const guessStorage = n => /냉장|생물|생굴|활\s|활새우|활 홍가리비|산지직송|오만둥이|멍게/.test(n) ? '냉장' : '냉동';
+function buildMaster(todayList) {
+  const m = new Map();
+  todayList.forEach(p => m.set(p.name, { name: p.name, st: p.st, today: true, qty: p.qty }));
+  // 일보 전체 출고 이력 → 실제 보관형태(MF=냉장) 반영
+  const hist = new Map();
+  LEDGER_OUT.forEach(o => { if (!/마른오징어|반건조오징어/.test(o.pname || '')) hist.set(shortName(o.pname), storageOf(o)); });
+  // 제품 기준정보 (P- 코드)
+  Object.entries(RAW_NAMES || {}).forEach(([code, name]) => {
+    if (!/^P-/.test(code) || /마른오징어|반건조오징어/.test(name)) return;
+    const n = shortName(name);
+    if (!m.has(n)) m.set(n, { name: n, st: hist.get(n) || guessStorage(name), today: false, qty: 0 });
+  });
+  hist.forEach((st, n) => { if (!m.has(n)) m.set(n, { name: n, st, today: false, qty: 0 }); });
+  MASTER = [...m.values()].sort((a, b) => (b.today - a.today) || b.qty - a.qty || a.name.localeCompare(b.name, 'ko'));
+}
+function openDropdown() {
+  const q = $('prod-search').value.trim().toLowerCase(), dd = $('prod-dd');
+  const words = q.split(/\s+/).filter(Boolean);
+  const hit = p => { const n = p.name.toLowerCase(); return words.every(w => n.includes(w)); };
+  const score = p => { const n = p.name.toLowerCase().replace(/^곰곰_/, ''); return (n.startsWith(words[0] || '') ? 0 : 1); };
+  let list = words.length ? MASTER.filter(hit).sort((a, b) => (b.today - a.today) || score(a) - score(b)) : MASTER.filter(p => p.today);
+  if (!words.length && !list.length) list = MASTER.slice(0, 15);
+  const hl = s => { let h = esc(s); words.forEach(w => { const i = h.toLowerCase().indexOf(w); if (i >= 0) h = h.slice(0, i) + '<mark>' + h.slice(i, i + w.length) + '</mark>' + h.slice(i + w.length); }); return h; };
+  dd.innerHTML = list.length
+    ? list.slice(0, 40).map((p, i) => `<button type="button" data-i="${i}"><span class="nm">${hl(p.name)}</span>${p.today ? '<span class="tag t">오늘 생산</span>' : ''}<span class="tag ${p.st === '냉동' ? 'f' : 'c'}">${p.st}</span></button>`).join('')
+      + (list.length > 40 ? `<div class="none">${list.length - 40}개 더 있음 — 단어를 더 입력하세요</div>` : '')
+    : `<div class="none">"${esc(q)}" 제품이 없습니다. 아래 칸에 직접 입력하세요.</div>`;
+  dd.hidden = false;
+  dd.querySelectorAll('button').forEach(b => b.onclick = () => pickFromMaster(list[+b.dataset.i]));
+}
+function pickFromMaster(p) {
+  PICK = { name: p.name, st: p.st, lots: '' };
+  $('prod-dd').hidden = true;
+  $('prod-search').value = '';
+  $('picked').hidden = false;
+  $('picked').innerHTML = `✔ ${esc(p.name)}<small>${p.st}${p.today ? ' · 오늘 생산' : ''}</small>`;
+  $('prod-search').blur();
+  refreshJudge();
+}
+// 드롭다운 바깥을 누르면 닫기
+document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) $('prod-dd').hidden = true; });
+
 function pick(p, btn) {
   PICK = { name: p.name, st: ccp === '2P' ? p.st : '', lots: p.lots ? [...p.lots].sort().join(', ') : '' };
   document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === btn));
@@ -398,6 +537,7 @@ function pickManual() {
   const n = $('manual-name').value.trim(); if (!n) { showToast('품명을 입력하세요.', 'error'); return; }
   PICK = { name: n, st: ccp === '2P' ? $('manual-st').value : '' };
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  if (ccp === '2P') { $('picked').hidden = false; $('picked').innerHTML = `✔ ${esc(n)}<small>${PICK.st} · 직접 입력</small>`; }
   showToast(`${n}${PICK.st ? ` (${PICK.st})` : ''} 선택`, 'success'); refreshJudge();
 }
 
@@ -456,7 +596,7 @@ async function addRow() {
   const miss = missingFields(); if (miss.length) { showToast('입력하지 않은 항목: ' + miss.join(', '), 'error'); return; }
   const time = $('e-time').value; if (!time) { showToast('시각을 입력하세요.', 'error'); return; }
   const errs = CCPS[ccp].check(ENTRY);
-  const row = Object.assign({ name: PICK.name, storage: PICK.st, raw_lots: PICK.lots || '', time, judge: errs.length ? 'ng' : 'ok', deviations: errs, sign: inspectorName(), entered_at: Date.now() }, ENTRY);
+  const row = Object.assign({ name: PICK.name, storage: PICK.st, raw_lots: PICK.lots || '', time, corrects: CORRECTS || null, judge: errs.length ? 'ng' : 'ok', deviations: errs, sign: inspectorName(), entered_at: Date.now() }, ENTRY);
   const id = 'r' + Date.now().toString(36);
   const date = $('date').value;
   const patch = Object.assign(metaPatch(date), { ['rows/' + id]: row });
@@ -465,7 +605,7 @@ async function addRow() {
   try {
     await fb(recPath(), 'PATCH', patch);
     showToast(errs.length ? '기록 저장 — 이탈 내용과 개선조치를 아래에 적어 주세요.' : '기록 저장 ✓', errs.length ? 'error' : 'success');
-    renderEntry(); await loadRecord();
+    CORRECTS = null; renderEntry(); await loadRecord();
   } catch (e) { console.error(e); showToast('저장 실패 — 네트워크를 확인하세요.', 'error'); }
   finally { $('btn-add').disabled = false; }
 }
@@ -502,6 +642,71 @@ async function endPass(id) {
   catch (e) { console.error(e); showToast('저장 실패', 'error'); }
 }
 
+// ── 한 줄 수정·삭제: 기록은 남기고 취소선 + 사유로 표시 (HACCP 기록 정정 방식) ──
+// 수정 = 원래 줄에 취소선 + "수정 — 사유", 값을 입력칸에 다시 불러와 고친 뒤 [기록 추가]
+let DEL_TARGET = null, CORRECTS = null;
+function deleteEntry(kind, id, mode) {
+  if (REC && REC.meta && REC.meta.reviewed) { showToast('결재 완료된 일지는 수정·삭제할 수 없습니다.', 'error'); return; }
+  const e = (REC[kind] || {})[id]; if (!e) return;
+  DEL_TARGET = { kind, id, mode };
+  const edit = mode === 'edit';
+  $('del-title').textContent = edit ? '이 기록을 수정할까요?' : '이 기록을 삭제할까요?';
+  $('del-title').style.color = edit ? '#1a3a5c' : '#c62828';
+  $('del-what').textContent = `${e.time || e.start || ''} ${e.name || ''}`;
+  $('del-label').textContent = edit ? '수정 사유 (필수)' : '삭제 사유 (필수)';
+  $('del-reason').placeholder = edit ? '예) 측정값 오입력 / 시각 잘못 입력' : '예) 품명 잘못 선택 / 중복 입력';
+  $('del-note').textContent = edit
+    ? '원래 기록은 일지에서 빠지고, 값이 입력칸에 다시 불러와집니다. 고친 뒤 [기록 추가]를 누르세요. (수정 이력은 조회·결재에서만 확인 가능)'
+    : '일지에서 빠집니다. (삭제 이력은 조회·결재에서만 확인 가능)';
+  $('del-ok').textContent = edit ? '수정하기' : '삭제';
+  $('del-ok').className = edit ? 'btn-add' : 'btn-del big';
+  $('del-ok').style.cssText = edit ? 'width:auto;min-height:48px;margin:0;padding:0 22px;font-size:15px;' : '';
+  $('del-reason').value = '';
+  $('del-dialog').hidden = false; $('del-reason').focus();
+}
+
+// 수정: 원래 값을 입력칸에 다시 채움
+function loadForEdit(kind, id, e) {
+  PICK = { name: e.name, st: e.storage || '', lots: e.raw_lots || '' };
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.firstChild && c.firstChild.textContent === e.name));
+  if (ccp === '2P') { $('picked').hidden = false; $('picked').innerHTML = `✔ ${esc(e.name)}<small>${esc(e.storage || '')} · 수정 중</small>`; }
+  if (kind === 'rows') {
+    renderEntry();
+    $('e-time').value = e.time || '';
+    CCPS[ccp].fields.forEach(f => {
+      if (e[f.k] === undefined || e[f.k] === null) return;
+      if (f.t === 'ox') setOX(f.k, e[f.k]); else { $('n-' + f.k).value = e[f.k]; setNum(f.k); }
+    });
+    CORRECTS = id;
+    $('entry-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    $('pass-start').value = e.start || ''; $('pass-qty').value = e.detect_qty ?? ''; $('pass-note').value = e.note || '';
+    PASS_DEV = null; setPassDev(e.deviation === true ? true : e.deviation === false ? false : null);
+    $('pass-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  refreshJudge();
+}
+function closeDelete() { DEL_TARGET = null; $('del-dialog').hidden = true; }
+async function confirmDelete() {
+  if (!DEL_TARGET) return;
+  const reason = $('del-reason').value.trim();
+  const { kind, id, mode } = DEL_TARGET, base = `${kind}/${id}/`;
+  if (!reason) { showToast((mode === 'edit' ? '수정' : '삭제') + ' 사유를 적어 주세요.', 'error'); return; }
+  if (!inspectorName()) { showToast('점검자를 선택하세요.', 'error'); return; }
+  const entry = REC[kind][id];
+  // 삭제 후 남은 기록 기준으로 이탈 여부 다시 계산
+  const alive = k => Object.entries(REC[k] || {}).filter(([i, x]) => !x.deleted && !(k === kind && i === id)).map(([, x]) => x);
+  const hasAlert = alive('rows').some(x => x.judge === 'ng') || alive('passes').some(x => x.deviation === true || x.detect_qty > 0);
+  const patch = { [base + 'deleted']: true, [base + 'deleted_reason']: (mode === 'edit' ? '수정 — ' : '') + reason, [base + 'deleted_by']: inspectorName(), [base + 'deleted_at']: Date.now(),
+                  has_alert: hasAlert, 'meta/updated_at': Date.now() };
+  try {
+    await fb(recPath(), 'PATCH', patch); closeDelete(); await loadRecord();
+    if (mode === 'edit') { loadForEdit(kind, id, entry); showToast('값을 불러왔습니다. 고친 뒤 [기록 추가]를 누르세요.', 'success'); }
+    else showToast('삭제했습니다.', 'success');
+  }
+  catch (e) { console.error(e); showToast('저장 실패 — 네트워크를 확인하세요.', 'error'); }
+}
+
 async function saveDeviation() {
   if (!guard()) return;
   const patch = Object.assign(metaPatch($('date').value), { deviation: { text: $('dev-text').value.trim(), action: $('dev-action').value.trim(), by: $('dev-by').value.trim(), saved_at: Date.now() } });
@@ -517,20 +722,27 @@ async function loadRecord() {
   try { REC = await fb(recPath()); } catch (e) { REC = null; }
   REC = REC || {};
   $('lock-box').innerHTML = REC.meta && REC.meta.reviewed ? `<div class="lock">✔ 결재 완료 — ${esc(REC.meta.confirmed_by || '')}</div>` : '';
-  const rows = Object.entries(REC.rows || {}).sort((a, b) => (a[1].time || '').localeCompare(b[1].time || ''));
-  $('rows').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>${ccp === '2P' ? '품명' : '원료명'}</th><th>${ccp === '2P' ? '통과시간' : '측정시각'}</th>${c.cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead><tbody>
-    ${rows.map(([, r]) => `<tr><td class="l">${esc(r.name)}${r.storage ? ` <small style="color:#888;">(${esc(r.storage)})</small>` : ''}</td><td>${esc(r.time)}</td>
+  // 삭제·수정 전 기록은 화면·일지에서 숨김 (DB에는 사유와 함께 이력으로만 남음 — 조회·결재에서 확인)
+  const delCount = Object.values(REC.rows || {}).filter(x => x.deleted).length + Object.values(REC.passes || {}).filter(x => x.deleted).length;
+  const rows = Object.entries(REC.rows || {}).filter(([, x]) => !x.deleted).sort((a, b) => (a[1].time || '').localeCompare(b[1].time || ''));
+  const locked = !!(REC.meta && REC.meta.reviewed);
+  const delCell = (kind, id, r) => r.deleted
+    ? `<td class="l" style="color:#c62828;font-size:12px;white-space:normal;">${/^수정/.test(r.deleted_reason || '') ? '' : '삭제<br>'}${esc(r.deleted_reason || '')}</td>`
+    : `<td>${locked ? '' : `<div style="display:flex;gap:4px;"><button class="btn-mini" onclick="deleteEntry('${kind}','${id}','edit')">수정</button><button class="btn-del" onclick="deleteEntry('${kind}','${id}','del')">삭제</button></div>`}</td>`;
+  $('rows').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>${ccp === '2P' ? '품명' : '원료명'}</th><th>${ccp === '2P' ? '통과시간' : '측정시각'}</th>${c.cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th><th>삭제</th></tr></thead><tbody>
+    ${rows.map(([id, r]) => `<tr class="${r.deleted ? 'deleted' : ''}"><td class="l">${esc(r.name)}${r.storage ? ` <small style="color:#888;">(${esc(r.storage)})</small>` : ''}</td><td>${esc(r.time)}</td>
       ${c.cols.map(([k]) => `<td>${k === 'dis' ? `${r.dis_min ?? ''}' ${r.dis_sec ?? ''}"` : CCPS[ccp].fields.find(f => f.k === k && f.t === 'ox') ? oxCell(r[k], c) : esc(r[k] ?? '')}</td>`).join('')}
-      <td>${r.judge === 'ok' ? '<span class="o">○</span>' : '<span class="x">×</span>'}</td><td>${esc(r.sign || '')}</td></tr>`).join('')}</tbody></table></div>`
+      <td>${r.judge === 'ok' ? '<span class="o">○</span>' : '<span class="x">×</span>'}</td><td>${esc(r.sign || '')}</td>${delCell('rows', id, r)}</tr>`).join('')}</tbody></table></div>`
     : '<div class="empty">아직 기록이 없습니다. 위에서 품명을 고르고 측정값을 넣은 뒤 [기록 추가]를 누르세요.</div>';
-  const passes = Object.entries(REC.passes || {}).sort((a, b) => (a[1].start || '').localeCompare(b[1].start || ''));
+  if (delCount) $('rows').innerHTML += `<div style="font-size:11.5px;color:#999;margin-top:6px;">삭제·수정된 기록 ${delCount}건은 일지에서 제외됨 (조회·결재의 이력에서 확인)</div>`;
+  const passes = Object.entries(REC.passes || {}).filter(([, x]) => !x.deleted).sort((a, b) => (a[1].start || '').localeCompare(b[1].start || ''));
   $('passes').innerHTML = ccp !== '2P' ? '' : `<div class="section-title" style="margin-top:16px;">금속검출기 제품 통과</div>` + (passes.length ? `<div class="tbl-wrap"><table>
-    <thead><tr><th>품명</th><th>최초통과</th><th>통과종료</th><th>검출량</th><th>이탈</th><th>특이사항</th><th></th></tr></thead><tbody>
-    ${passes.map(([id, p]) => `<tr><td class="l">${esc(p.name)} <small style="color:#888;">(${esc(p.storage || '')})</small></td><td>${esc(p.start)}</td><td>${esc(p.end || '—')}</td>
-      ${p.end ? `<td>${p.detect_qty ?? ''}</td><td>${p.deviation === true ? '<span class="x">유</span>' : p.deviation === false ? '무' : ''}</td><td class="l">${esc(p.note || '')}</td><td></td>`
+    <thead><tr><th>품명</th><th>최초통과</th><th>통과종료</th><th>검출량</th><th>이탈</th><th>특이사항</th><th></th><th>삭제</th></tr></thead><tbody>
+    ${passes.map(([id, p]) => `<tr class="${p.deleted ? 'deleted' : ''}"><td class="l">${esc(p.name)} <small style="color:#888;">(${esc(p.storage || '')})</small></td><td>${esc(p.start)}</td><td>${esc(p.end || '—')}</td>
+      ${p.end || p.deleted ? `<td>${p.detect_qty ?? ''}</td><td>${p.deviation === true ? '<span class="x">유</span>' : p.deviation === false ? '무' : ''}</td><td class="l">${esc(p.note || '')}</td><td></td>`
       : `<td><input id="pq-${id}" type="number" inputmode="numeric" min="0" value="${p.detect_qty ?? ''}" style="width:70px;min-height:40px;font-size:16px;text-align:center;"></td>
          <td><select id="pd-${id}" style="min-height:40px;font-size:15px;"><option value="">선택</option><option ${p.deviation === false ? 'selected' : ''}>무</option><option ${p.deviation === true ? 'selected' : ''}>유</option></select></td>
-         <td class="l">${esc(p.note || '')}</td><td><button class="btn-mini" onclick="endPass('${id}')">통과 종료</button></td>`}</tr>`).join('')}
+         <td class="l">${esc(p.note || '')}</td><td><button class="btn-mini" onclick="endPass('${id}')">통과 종료</button></td>`}${delCell('passes', id, p)}</tr>`).join('')}
     </tbody></table></div>` : '<div class="empty">제품 통과 기록이 없습니다.</div>');
   const dv = REC.deviation || {};
   $('dev-text').value = dv.text || ''; $('dev-action').value = dv.action || ''; $('dev-by').value = dv.by || '';
