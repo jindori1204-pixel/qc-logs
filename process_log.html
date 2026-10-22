@@ -96,6 +96,19 @@
       .proc-item { border: 1px solid #999; border-radius: 0; margin-bottom: 4px; padding: 6px; page-break-inside: avoid; break-inside: avoid; }
       .photo-thumb img { height: auto; }
     }
+    /* 지금 시각 · 전체 적합 · 사후 입력 */
+    .btn-now { margin-left: 4px; padding: 3px 8px; border: 1px solid #2e5f8a; border-radius: 12px; background: #fff; color: #2e5f8a; font-size: 11px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    .bulk-ok { background: #f6fbf6; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+    .btn-bulk { width: 100%; min-height: 44px; border: 1.5px solid #2e7d32; border-radius: 8px; background: #fff; color: #2e7d32; font-size: 14px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    .btn-bulk:disabled { border-color: #ccc; color: #aaa; cursor: not-allowed; }
+    .bulk-note { font-size: 11.5px; color: #2e7d32; margin-top: 7px; line-height: 1.5; }
+    .bulk-note.off { color: #8d6e00; }
+    .bulk-confirm { display: none; align-items: center; gap: 8px; font-size: 13px; color: #6d5600; margin-bottom: 8px; cursor: pointer; }
+    .bulk-confirm.show { display: flex; }
+    .bulk-confirm input { width: 20px; height: 20px; }
+    .late-box { display: none; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; color: #6d5600; line-height: 1.6; }
+    .late-box.show { display: block; }
+
     /* 생산일보 불러오기 */
     .btn-ledger { width: 100%; min-height: 46px; padding: 10px; border: 1.5px solid #1a3a5c; border-radius: 8px; background: #fff; color: #1a3a5c; font-size: 13.5px; font-weight: bold; cursor: pointer; font-family: inherit; }
     .btn-ledger:disabled { opacity: .5; }
@@ -168,9 +181,15 @@
   <div class="card">
     <div class="section-title">■ 공정별 점검결과 <span class="section-sub">적합 O · 부적합 X · 해당없음 −</span></div>
     <div class="round-labels">
-      <div class="rl"><label>점검결과 ① 시각/구분</label><input id="round1_label" placeholder="예) 오전" oninput="syncRoundTitles()"></div>
-      <div class="rl"><label>점검결과 ② 시각/구분</label><input id="round2_label" placeholder="예) 오후" oninput="syncRoundTitles()"></div>
+      <div class="rl"><label>점검결과 ① 시각/구분 <button type="button" class="btn-now" onclick="stampNow('round1_label')">🕒 지금 시각</button></label><input id="round1_label" placeholder="예) 09:30 손질 꽃게 1kg" oninput="syncRoundTitles()"></div>
+      <div class="rl"><label>점검결과 ② 시각/구분 <button type="button" class="btn-now" onclick="stampNow('round2_label')">🕒 지금 시각</button></label><input id="round2_label" placeholder="예) 15:20 생물 홍합 1kg" oninput="syncRoundTitles()"></div>
     </div>
+    <div class="bulk-ok" id="bulk-ok">
+      <label class="bulk-confirm" id="bulk-confirm-wrap"><input type="checkbox" id="bulk-confirm" onchange="refreshDateMode()"> 이 날짜의 실제 점검 기록(근거)을 확인했습니다</label>
+      <button type="button" class="btn-bulk" id="btn-bulk" onclick="bulkOK()">○ 빈 항목 전체 적합</button>
+      <div class="bulk-note" id="bulk-note">실제로 점검한 뒤 사용하세요. 비어 있는 적/부만 '적'으로 채웁니다. 이상 항목은 '부'로 바꾸고, 온도·중량 등 측정값은 직접 입력하세요.</div>
+    </div>
+    <div class="late-box" id="late-box"></div>
     <div id="proc-list"></div>
   </div>
 
@@ -497,7 +516,62 @@ function ledgerGroup(o) {
 const lgShort = n => String(n || '').replace(/^위드프레쉬\s*(산지직송\s*)?/, '').replace(/\s*1개$/, '').trim();
 const lgEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
-function clearLedger() { LEDGER_DAY = null; LEDGER_PICK = null; document.getElementById('ledger-box').innerHTML = ''; }
+let DRAFT = null;   // { id, date, product } — 작성 대기 일지
+function clearLedger() {
+  LEDGER_DAY = null; LEDGER_PICK = null; DRAFT = null;
+  document.getElementById('ledger-box').innerHTML = '';
+  document.getElementById('bulk-confirm').checked = false;   // 날짜가 바뀌면 근거 확인을 다시 받음
+  refreshDateMode();
+}
+
+// review.html의 [이 날짜 일지 작성하기] → process_log.html?date=2026-10-15&group=crab_cut
+async function openFromQuery() {
+  const q = new URLSearchParams(location.search), group = q.get('group');
+  if (!q.get('date') || !group) return;
+  await loadLedgerDay();
+  const i = LEDGER_DAY ? LEDGER_DAY.groups.findIndex(g => g.group === group) : -1;
+  if (i >= 0) applyLedger(i);
+}
+
+// ── 지금 시각 · 전체 적합 · 사후 입력 ───────────────────────
+// 시각은 버튼을 누른 실제 시각만 넣는다. 지난 날짜에는 전체 적합·지금 시각을 쓰지 않고, 근거를 비고에 남겨야 저장된다.
+const isPastDate = () => { const d = document.getElementById('date').value; return !!d && d < todayStr(); };
+function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
+function stampNow(id) {
+  if (isPastDate()) { showToast('지난 날짜에는 실제 점검 시각을 기록 근거대로 직접 입력하세요.', 'error'); return; }
+  const el = document.getElementById(id);
+  el.value = nowHM() + ' ' + el.value.replace(/^\d{1,2}:\d{2}\s*/, '');
+  syncRoundTitles();
+}
+
+function bulkOK() {
+  if (isPastDate() && !document.getElementById('bulk-confirm').checked) return;
+  const has2 = document.getElementById('round2_label').value.trim() !== '';
+  PRODUCTS[currentProduct].rows.forEach(row => {
+    if (!row.yn) return;
+    ['r1'].concat(has2 ? ['r2'] : []).forEach(round => { if (getYN(row.id, round) === null) setYN(row.id, round, true); });
+  });
+  showToast('빈 항목을 적합으로 표시했습니다. 이상 항목과 측정값을 확인하세요.', 'success');
+}
+
+function refreshDateMode() {
+  const past = isPastDate();
+  const btn = document.getElementById('btn-bulk'), note = document.getElementById('bulk-note'), late = document.getElementById('late-box');
+  if (!btn) return;
+  const confirmed = document.getElementById('bulk-confirm').checked;
+  document.getElementById('bulk-confirm-wrap').classList.toggle('show', past);
+  if (!past) document.getElementById('bulk-confirm').checked = false;
+  btn.disabled = past && !confirmed;
+  note.classList.toggle('off', past);
+  note.textContent = past
+    ? '지난 날짜: 실제 점검 기록(종이 점검표·메모·사진)을 확인한 경우에만 체크 후 사용하세요. 비고에 근거를 적어야 저장되며 "사후입력"으로 기록됩니다.'
+    : '실제로 점검한 뒤 사용하세요. 비어 있는 적/부만 \'적\'으로 채웁니다. 이상 항목은 \'부\'로 바꾸고, 온도·중량 등 측정값은 직접 입력하세요.';
+  late.classList.toggle('show', past);
+  late.innerHTML = past
+    ? `📌 <b>사후 전산입력</b> — ${document.getElementById('date').value} 일지를 오늘(${todayStr()}) 입력합니다. 저장하려면 아래 <b>비고</b>에 근거(예: "종이 점검표 원본 보고 입력")를 적어야 하며, 기록에 "사후 전산입력"으로 표시됩니다.`
+    : '';
+}
 
 async function loadLedgerDay() {
   const date = document.getElementById('date').value;
@@ -527,15 +601,19 @@ async function loadLedgerDay() {
       x.qty += Number(o.qty) || 0; x.chs.add(o.ch);
       G.set(k, x);
     });
-    // 이미 작성된 공정관리 일지 수
-    let written = {};
+    // 이미 작성된 공정관리 일지 수 + 미리 등록된 '작성 대기' 일지
+    let written = {}, drafts = {};
     try {
       const [y, m] = date.split('-');
       const logs = await fetch(`${FIREBASE_URL}/process_logs/${y}/${m}.json`).then(r => r.json());
-      Object.values(logs || {}).forEach(l => { if (l && l.meta && l.meta.date === date) written[l.meta.product] = (written[l.meta.product] || 0) + 1; });
+      Object.entries(logs || {}).forEach(([id, l]) => {
+        if (!l || !l.meta || l.meta.date !== date) return;
+        if (l.meta.status === 'draft') drafts[l.meta.product] = id;
+        else written[l.meta.product] = (written[l.meta.product] || 0) + 1;
+      });
     } catch (e) { /* 조회 실패해도 불러오기는 계속 */ }
 
-    LEDGER_DAY = { date, groups: [...G.values()] };
+    LEDGER_DAY = { date, groups: [...G.values()], drafts };
     const order = Object.keys(PRODUCTS);
     LEDGER_DAY.groups.sort((a, b) => (a.group ? order.indexOf(a.group) : 99) - (b.group ? order.indexOf(b.group) : 99));
     box.innerHTML = `<div class="lg-msg">${date} 생산 제품군 ${LEDGER_DAY.groups.length}개 — 작성할 제품군을 누르세요.</div>
@@ -545,7 +623,7 @@ async function loadLedgerDay() {
         return `<button type="button" class="lg-chip" id="lgc-${i}" onclick="applyLedger(${i})">
           <span class="t"><b>${g.group ? lgEsc(PRODUCTS[g.group].label) : '양식 직접 선택 필요'}</b>
           <small>${lgEsc(items.slice(0, 3).map(it => it.name).join(' · '))}${items.length > 3 ? ` 외 ${items.length - 3}` : ''} · ${g.qty.toLocaleString()}개</small></span>
-          <span class="lg-st ${w ? 'done' : 'miss'}">${w ? `작성 ${w}건` : '미작성'}</span></button>`;
+          <span class="lg-st ${w ? 'done' : 'miss'}">${w ? `작성 ${w}건` : g.group && drafts[g.group] ? '작성 대기' : '미작성'}</span></button>`;
       }).join('')}</div><div id="ledger-detail"></div>`;
   } catch (e) {
     console.error(e);
@@ -574,6 +652,9 @@ function applyLedger(i) {
     items: items.map(it => ({ code: it.code, name: it.name, lot: it.lot, qty: it.qty, ch: it.ch, thaw: it.thaw })),
     raw_lots: [...g.raws].sort(),
   };
+  // 미리 등록된 '작성 대기' 일지가 있으면 저장 시 그 일지를 완료 처리
+  DRAFT = g.group && LEDGER_DAY.drafts && LEDGER_DAY.drafts[g.group]
+    ? { id: LEDGER_DAY.drafts[g.group], date: LEDGER_DAY.date, product: g.group } : null;
   document.getElementById('ledger-detail').innerHTML = `<div class="lg-detail"><table>
       <thead><tr><th>제품</th><th>LOT</th><th>수량</th><th>채널</th></tr></thead>
       <tbody>${items.map(it => `<tr><td>${lgEsc(it.name)}${it.thaw && !/해동/.test(it.name) ? ' (해동)' : ''}</td><td>${lgEsc(it.lot)}</td><td class="n">${it.qty.toLocaleString()}</td><td>${lgEsc(it.ch)}</td></tr>`).join('')}</tbody>
@@ -798,6 +879,12 @@ async function saveRecord() {
   if (!p.rows.some(row => row.yn && (getYN(row.id, 'r1') !== null || getYN(row.id, 'r2') !== null))) {
     showToast('점검결과(적/부)를 입력한 뒤 저장하세요.', 'error'); return;
   }
+  // 지난 날짜 = 사후 전산입력: 비고에 근거가 있어야 저장
+  const late = isPastDate();
+  if (late && !document.getElementById('note').value.trim()) {
+    showToast('지난 날짜 일지는 비고에 입력 근거를 적어야 저장됩니다.', 'error');
+    document.getElementById('note').focus(); return;
+  }
   const checks = {};
   let hasAlert = false;
 
@@ -840,15 +927,19 @@ async function saveRecord() {
   };
   // 생산일보에서 불러온 품목·LOT (같은 날짜일 때만)
   if (LEDGER_PICK && LEDGER_PICK.date === date) payload.ledger = LEDGER_PICK;
+  if (late) { payload.meta.late_entry = true; payload.meta.late_entered_on = todayStr(); }
 
   const [year, month] = date.split('-');
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = '저장 중...';
 
   try {
+    // 작성 대기 일지와 날짜·제품군이 같으면 그 키에 PUT(완료 처리), 아니면 새로 POST
+    const useDraft = !!DRAFT && DRAFT.date === date && DRAFT.product === currentProduct;
+    if (useDraft) payload.meta.status = 'done';
     const res = await fetch(
-      `${FIREBASE_URL}/process_logs/${year}/${month}.json`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+      useDraft ? `${FIREBASE_URL}/process_logs/${year}/${month}/${DRAFT.id}.json` : `${FIREBASE_URL}/process_logs/${year}/${month}.json`,
+      { method: useDraft ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
     );
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const photoCnt = (PHOTOS.stamp || []).length;
@@ -872,6 +963,8 @@ function showToast(msg, type) {
 // ── 실행 ──────────────────────────────────────────────────
 renderTable();
 renderPhotos('stamp');
+refreshDateMode();
+openFromQuery();
 </script>
 </body>
 </html>
