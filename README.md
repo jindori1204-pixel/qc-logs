@@ -18,6 +18,7 @@ HACCP 일지를 휴대폰·태블릿 브라우저로 작성하고, PC에서 조�
 | 부자재 육안검사 | https://jindori1204-pixel.github.io/qc-logs/submaterial_log.html | 포장재 등 입고 검사 |
 | 개인위생 점검표 | https://jindori1204-pixel.github.io/qc-logs/personal_hygiene_log.html | 작업자 개인위생 |
 | 운송차량 점검표 | https://jindori1204-pixel.github.io/qc-logs/vehicle_log.html | 입고·출고 차량 |
+| CCP 모니터링일지 | https://jindori1204-pixel.github.io/qc-logs/ccp_monitor_log.html | CCP-1B 세척 · CCP-1BC 소독·헹굼 · CCP-2P 금속검출 (현장 태블릿) |
 | CCP 검증점검표 | https://jindori1204-pixel.github.io/qc-logs/ccp_log.html | 금속검출·소독·세척 CCP 검증 |
 | 원료입고 | https://jindori1204-pixel.github.io/qc-logs/incoming_log.html | 원료 입고 기록 |
 | MF 산지직송 검품일지 | https://jindori1204-pixel.github.io/qc-logs/mf_inspection_log.html | MF 출고품 검품 (검품기준서 WF-QC-104) |

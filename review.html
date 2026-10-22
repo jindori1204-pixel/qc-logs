@@ -35,6 +35,9 @@
     .filter-bar select:focus, .filter-bar input[type="date"]:focus { border-color: #1a3a5c; outline: none; }
     .btn-search { padding: 8px 20px; background: #1a3a5c; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-family: inherit; cursor: pointer; font-weight: bold; }
     .btn-search:hover { background: #0f2540; }
+    .btn-search.btn-export { background: #2e7d32; }
+    .btn-search.btn-export:hover { background: #1b5e20; }
+    .btn-search:disabled { background: #aab; cursor: wait; }
     .filter-group { display: flex; align-items: center; gap: 6px; }
     .radio-group { display: flex; gap: 10px; }
     .radio-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; color: #444; }
@@ -324,6 +327,7 @@
   <button class="log-tab" data-type="vehicle"     onclick="switchTab('vehicle')">🚚 운송차량</button>
   <button class="log-tab" data-type="ccp"         onclick="switchTab('ccp')">✅ CCP 검증</button>
   <button class="log-tab" data-type="mf_inspection" onclick="switchTab('mf_inspection')">🦪 MF 검품</button>
+  <button class="log-tab" data-type="ccp_monitor" onclick="switchTab('ccp_monitor')">🛡 CCP 모니터링</button>
 </div>
 
 <!-- 필터 -->
@@ -357,6 +361,8 @@
     <select id="msds-item-select" onchange="renderList(currentRecords)"></select>
   </div>
   <button class="btn-search" onclick="loadRecords()">조회</button>
+  <button class="btn-search btn-export" id="btn-export-tab" onclick="exportPeriod('tab')" title="조회기간의 현재 탭 일지를 엑셀로 저장">📊 이 탭 엑셀 저장</button>
+  <button class="btn-search btn-export" id="btn-export-all" onclick="exportPeriod('all')" title="조회기간의 모든 일지를 한 엑셀 파일(탭별 시트)로 저장">📦 전체 일지 엑셀 저장</button>
 </div>
 
 <!-- 메인 -->
@@ -517,6 +523,14 @@ const TAB_CONFIG = {
     rowFn: renderCcpRow,
     modalFn: renderCcpModal,
     printFn: printCcp,
+  },
+  ccp_monitor: {
+    label: 'CCP 모니터링일지',
+    path: (y, m) => `ccp_monitor_logs/${y}/${m}`,
+    headers: ['작성일자','CCP','기록 수','이탈','점검자','결재상태','결재일시'],
+    rowFn: renderCcpMonRow,
+    modalFn: renderCcpMonModal,
+    printFn: printCcpMon,
   },
   mf_inspection: {
     label: 'MF 산지직송 검품일지',
@@ -1239,7 +1253,12 @@ function procCell(check, roundKey, skipJudge) {
 function renderProcessRow(r) {
   const n = (r.photos && r.photos.stamp && r.photos.stamp.length) || 0;
   const photo = n ? `<span class="photo-cell-mark">📷 ${n}장</span>` : `<span class="photo-cell-none">—</span>`;
-  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.product_label || '—'}</td><td>${r.meta.product_name || '—'}</td>
+  if (r.meta.status === 'draft') {
+    return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.product_label || '—'}</td><td>${r.meta.product_name || '—'}</td>
+      <td>—</td><td>—</td><td>—</td><td><span class="status-badge" style="background:#fff8e1;color:#8d6e00;">작성 대기</span></td><td>—</td>`;
+  }
+  const late = r.meta.late_entry ?`<br><span class="status-badge" style="background:#fff8e1;color:#8d6e00;font-size:10.5px;">사후입력 ${r.meta.late_entered_on || ''}</span>` : '';
+  return `<td><strong>${r.meta.date}</strong>${late}</td><td>${r.meta.product_label || '—'}</td><td>${r.meta.product_name || '—'}</td>
     <td>${r.meta.inspector || '—'}</td><td>${photo}</td><td>${alertCell(r.has_alert)}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
 }
 
@@ -1281,7 +1300,16 @@ function renderProcessModal(r) {
   const note = r.note ? `<div class="notes-box"><div class="lbl">비고</div>${r.note}</div>` : '';
   const conf = r.confirm_note ? `<div class="notes-box"><div class="lbl">확인 (특이사항·개선조치)</div>${r.confirm_note}</div>` : '';
 
-  return `${procLedgerHtml(r)}<div class="info-row">
+  const lateBox = r.meta.late_entry ? `<div class="notes-box" style="background:#fff8e1;color:#6d5600;"><b>사후 전산입력</b> — ${r.meta.date} 일지를 ${r.meta.late_entered_on || ''}에 입력 (근거: 비고 참조)</div>` : '';
+  if (r.meta.status === 'draft') {
+    return `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#6d5600;line-height:1.6;">
+        📌 <b>작성 대기</b> — 생산일보 기준 품목·LOT만 미리 등록된 일지입니다. 점검결과는 아직 입력되지 않았습니다.<br>
+        <a href="process_log.html?date=${r.meta.date}&group=${r.meta.product}" style="color:#1a3a5c;font-weight:bold;">→ 이 날짜 일지 작성하기</a></div>
+      <div class="info-row"><div class="info-item"><div class="lbl">제품군</div><div class="val">${r.meta.product_label || '—'}</div></div>
+        <div class="info-item"><div class="lbl">제품명</div><div class="val">${r.meta.product_name || '—'}</div></div></div>
+      ${procLedgerHtml(r)}`;
+  }
+  return `${lateBox}${procLedgerHtml(r)}<div class="info-row">
       <div class="info-item"><div class="lbl">제품군</div><div class="val">${r.meta.product_label || '—'}</div></div>
       <div class="info-item"><div class="lbl">제품명</div><div class="val">${r.meta.product_name || '—'}</div></div>
       <div class="info-item"><div class="lbl">결재란</div><div class="val" style="font-size:12px;">${(r.meta.approvers || []).join(' · ') || '—'}</div></div>
@@ -1318,6 +1346,7 @@ function printProcess(r) {
   printBase(r, '공정관리 점검일지', `
     <table class="p-meta" style="margin-bottom:4mm;">
       <tr><td class="lbl">제품군</td><td>${r.meta.product_label || '—'}</td><td class="lbl">제품명</td><td>${r.meta.product_name || '—'}</td></tr>
+      ${r.meta.late_entry ? `<tr><td class="lbl">사후입력</td><td colspan="3">${r.meta.date} 일지를 ${r.meta.late_entered_on || ''}에 전산 입력 (근거: 비고)</td></tr>` : ''}
     </table>
     ${procLedgerItems(r).length ? `<table class="p-table p-tight"><thead><tr><th>생산 제품 (생산·물류일보)</th><th>LOT</th><th>수량</th><th>채널</th></tr></thead>
       <tbody>${procLedgerItems(r).map(it => `<tr><td>${it.name || ''}${it.thaw && !/해동/.test(it.name || '') ? ' (해동)' : ''}</td><td style="text-align:center;">${it.lot || ''}</td><td style="text-align:right;">${it.qty ?? ''}</td><td style="text-align:center;">${it.ch || ''}</td></tr>`).join('')}</tbody></table>
@@ -1595,6 +1624,65 @@ function printMf(r) {
 }
 
 // ── 중요관리점(CCP) 검증점검표 ────────────────────────────
+// ── CCP 모니터링일지 (ccp_monitor_log.html — 1B 세척 / 1BC 소독·헹굼 / 2P 금속검출) ──
+const CCPMON_COLS = {
+  '1B':  [['raw_kg','원물량(kg)'],['w1_vol','1차 세척수량'],['w1_sec','1차 세척시간(초)'],['w2_vol','2차 세척수량'],['w2_sec','2차 세척시간(초)'],['change','세척수 교체']],
+  '1BC': [['raw_kg','원물량(kg)'],['conc','소독농도'],['dis','소독시간'],['rinse_vol','헹굼수량'],['rinse_sec','헹굼시간(초)'],['chlorine','잔류염소'],['change','헹굼수/소독수 교체']],
+  '2P':  [['fe','Fe만'],['sts','STS만'],['prod','제품만'],['fe_p','Fe+제품'],['sts_p','STS+제품']],
+};
+const CCPMON_LIMIT = {
+  '1B': '세척횟수 2회 · 세척수량 350~400ℓ · 세척시간 20~40초 · 세척수 교체주기 300kg 이내 · 1회 원물량 10kg 이내',
+  '1BC': '차아염소산나트륨 100~150ppm · 소독시간 5~6분 · 1회 소독량 10kg 이내 · 헹굼수량 350~400ℓ · 헹굼시간 30~45초 · 잔류염소 4ppm 이하 · 교체주기 300kg 이내',
+  '2P': '냉장제품 Fe 3.0mmΦ·STS 5.0mmΦ 이상 불검출 / 냉동제품 Fe 2.5mmΦ·STS 4.0mmΦ 이상 불검출 (감도: 검출 ○ · 불검출 ×)',
+};
+const ccpMonRows = r => Object.values(r.rows || {}).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+const ccpMonPasses = r => Object.values(r.passes || {}).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+const ccpMonOX = v => v === 'ok' ? '○' : v === 'ng' ? '×' : '';
+const ccpMonCell = (row, k) => k === 'dis' ? `${row.dis_min ?? ''}' ${row.dis_sec ?? ''}"` : (row[k] === 'ok' || row[k] === 'ng') ? ccpMonOX(row[k]) : (row[k] ?? '');
+
+function renderCcpMonRow(r) {
+  const rows = ccpMonRows(r), ng = rows.filter(x => x.judge === 'ng').length;
+  return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.ccp_label || r.meta.ccp || '—'}</td><td>${rows.length}${r.passes ? ` / 통과 ${ccpMonPasses(r).length}` : ''}</td>
+    <td>${ng ? `<span class="fail">${ng}</span>` : '0'}</td><td>${r.meta.inspector || '—'}</td><td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
+}
+function renderCcpMonModal(r) {
+  const c = r.meta.ccp, cols = CCPMON_COLS[c] || [];
+  const rows = ccpMonRows(r);
+  const nameHead = c === '2P' ? '품명' : '원료명';
+  const body = rows.map(x => `<tr><td>${x.name || ''}<br><small style="color:#888;">${[x.storage, x.raw_lots ? 'LOT ' + x.raw_lots : ''].filter(Boolean).join(' · ')}</small></td><td style="text-align:center;">${x.time || ''}</td>
+    ${cols.map(([k]) => `<td style="text-align:center;">${ccpMonCell(x, k)}</td>`).join('')}
+    <td style="text-align:center;">${x.judge === 'ok' ? '<span class="ok">○</span>' : '<span class="fail">×</span>'}${x.deviations && x.deviations.length ? `<div style="font-size:10.5px;color:#c62828;">${x.deviations.join(', ')}</div>` : ''}</td>
+    <td style="text-align:center;">${x.sign || ''}</td></tr>`).join('');
+  const passes = ccpMonPasses(r);
+  const passTbl = passes.length ? `<div style="font-size:12.5px;font-weight:bold;color:#1a3a5c;margin:10px 0 6px;">■ 금속검출기 제품 통과</div>
+    <table class="detail-table"><thead><tr><th style="text-align:left;">품명</th><th>최초통과</th><th>통과종료</th><th>검출량</th><th>이탈</th><th>특이사항</th></tr></thead><tbody>
+    ${passes.map(p => `<tr><td>${p.name || ''} <small style="color:#888;">(${p.storage || ''})</small></td><td style="text-align:center;">${p.start || ''}</td><td style="text-align:center;">${p.end || '—'}</td>
+      <td style="text-align:center;">${p.detect_qty ?? ''}</td><td style="text-align:center;">${p.deviation === true ? '<span class="fail">유</span>' : p.deviation === false ? '무' : ''}</td><td>${p.note || ''}</td></tr>`).join('')}</tbody></table>` : '';
+  const dv = r.deviation || {};
+  const devBox = (dv.text || dv.action) ? `<div class="alert-box"><h4>⚠ 한계기준 이탈 및 개선조치</h4>
+    <div class="alert-row"><div class="al">이탈내용</div><div class="ac">${dv.text || '(미입력)'}</div></div>
+    <div class="alert-row"><div class="al">개선조치 및 결과</div><div class="ac">${dv.action || '(미입력)'}</div></div>
+    <div class="alert-row"><div class="al">조치자</div><div class="ac">${dv.by || '(미입력)'}</div></div></div>` : '';
+  return `<table class="detail-table"><tr><td class="lbl-col">한계기준</td><td>${CCPMON_LIMIT[c] || ''}</td></tr></table>
+    <table class="detail-table" style="font-size:12px;"><thead><tr><th style="text-align:left;">${nameHead}</th><th>${c === '2P' ? '통과시간' : '측정시각'}</th>${cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead>
+    <tbody>${body || `<tr><td colspan="${cols.length + 4}" style="text-align:center;color:#aaa;">기록 없음</td></tr>`}</tbody></table>${passTbl}${devBox}`;
+}
+function printCcpMon(r) {
+  const c = r.meta.ccp, cols = CCPMON_COLS[c] || [];
+  const rows = ccpMonRows(r).map(x => `<tr><td>${x.name || ''}${x.storage ? ` (${x.storage})` : ''}${x.raw_lots ? `<br><span style="font-size:7pt;">LOT ${x.raw_lots}</span>` : ''}</td><td style="text-align:center;">${x.time || ''}</td>
+    ${cols.map(([k]) => `<td style="text-align:center;">${ccpMonCell(x, k)}</td>`).join('')}<td style="text-align:center;">${x.judge === 'ok' ? '○' : '×'}</td><td style="text-align:center;">${x.sign || ''}</td></tr>`).join('');
+  const passes = ccpMonPasses(r);
+  const dv = r.deviation || {};
+  printBase(r, `중요관리점(${r.meta.ccp_label || c}) 모니터링일지`, `
+    <table class="p-meta" style="margin-bottom:3mm;"><tr><td class="lbl">한계기준</td><td>${CCPMON_LIMIT[c] || ''}</td></tr></table>
+    <table class="p-table"><thead><tr><th>${c === '2P' ? '품명' : '원료명'}</th><th>${c === '2P' ? '통과시간' : '측정시각'}</th>${cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead><tbody>${rows}</tbody></table>
+    ${passes.length ? `<div class="p-section">■ 금속검출기 제품 통과</div><table class="p-table"><thead><tr><th>품명</th><th>최초통과시간</th><th>통과종료시간</th><th>검출량</th><th>이탈유무</th><th>특이사항</th></tr></thead>
+      <tbody>${passes.map(p => `<tr><td>${p.name || ''} (${p.storage || ''})</td><td style="text-align:center;">${p.start || ''}</td><td style="text-align:center;">${p.end || ''}</td><td style="text-align:center;">${p.detect_qty ?? ''}</td><td style="text-align:center;">${p.deviation === true ? '유' : p.deviation === false ? '무' : ''}</td><td>${p.note || ''}</td></tr>`).join('')}</tbody></table>` : ''}
+    <div class="p-section">■ 한계기준 이탈 및 개선조치</div>
+    <table class="p-table"><thead><tr><th>한계기준 이탈내용</th><th>개선조치 및 결과</th><th>조치자</th></tr></thead>
+      <tbody><tr><td>${dv.text || ''}</td><td>${dv.action || ''}</td><td>${dv.by || ''}</td></tr></tbody></table>`);
+}
+
 function renderCcpRow(r) {
   return `<td><strong>${r.meta.date}</strong></td><td>${r.meta.inspector || '—'}</td><td>${alertCell(r.has_alert)}</td>
     <td>${statusCell(r)}</td><td>${reviewedAtCell(r)}</td>`;
@@ -1818,6 +1906,118 @@ function exportRecordExcel() {
   const r = currentRecords[selectedId];
   if (!r || !cfg.exportFn) return;
   cfg.exportFn(r);
+}
+
+// ── 기간 엑셀 저장 (전산 보관용) ───────────────────────────
+// 조회기간의 일지를 그대로 엑셀로 내보냄. 사진(base64)은 용량 때문에 "사진 N장"으로만 표시.
+// 구글드라이브 자동 백업(Apps Script)과 같은 표 구성.
+const HYGIENE_PERIODS = ['daily', 'weekly', 'monthly', 'quarterly', 'annual'];
+const xDate = ms => ms ? new Date(ms).toLocaleString('ko-KR') : '';
+const xYN = v => v === true ? '적' : v === false ? '부' : '';
+const xOX = v => v === 'ok' ? '○' : v === 'ng' ? '×' : v === 'na' ? '−' : '';
+
+async function fetchPeriodRecords(type, start, end) {
+  const cfg = TAB_CONFIG[type];
+  const out = [];
+  for (const { y, m } of getMonthRange(start, end)) {
+    const paths = type === 'hygiene' ? HYGIENE_PERIODS.map(p => cfg.path(y, m, p)) : [cfg.path(y, m)];
+    for (const path of paths) {
+      const data = await fetch(`${FIREBASE_URL}/${path}.json`).then(r => r.json()).catch(() => null);
+      Object.entries(data || {}).forEach(([id, r]) => {
+        if (r && r.meta && r.meta.date >= start && r.meta.date <= end) out.push({ id, _path: path, ...r });
+      });
+    }
+  }
+  return out.sort((a, b) => a.meta.date.localeCompare(b.meta.date) || (a.meta.created_at || 0) - (b.meta.created_at || 0));
+}
+
+// 중첩된 기록을 "항목: 값" 줄로 펼침 (사진·메타 제외)
+function flattenDetail(obj, prefix) {
+  const lines = [];
+  Object.entries(obj || {}).forEach(([k, v]) => {
+    if (k === 'meta' || k === 'photos' || k === 'id' || k === '_path') return;
+    const key = prefix ? prefix + '.' + k : k;
+    if (v && typeof v === 'object') lines.push(...flattenDetail(v, key));
+    else if (typeof v === 'string' && v.startsWith('data:image')) lines.push(key + ': (사진)');
+    else if (v !== null && v !== '' && v !== undefined) lines.push(key + ': ' + v);
+  });
+  return lines;
+}
+const photoCount = r => Object.values(r.photos || {}).reduce((s, l) => s + (Array.isArray(l) ? l.length : Object.keys(l || {}).length), 0);
+const approval = r => r.meta.status === 'draft' ? '작성 대기' : r.meta.reviewed ? '결재완료' : '미결재';
+
+function sheetRows(type, recs) {
+  if (type === 'process') {
+    const head = ['점검일자','제품군','제품명','생산 제품(LOT·수량)','원료 LOT','공정명','관리항목','관리기준','점검① 구분','점검① 결과','점검① 기록','점검② 구분','점검② 결과','점검② 기록','조치','점검자','확인자','결재','결재일시','등록일시','날인사진','비고','확인(개선조치)'];
+    const rows = [];
+    recs.forEach(r => {
+      const lbl = r.round_labels || {};
+      const items = procLedgerItems(r).map(it => `${it.name} ${it.lot} ${it.qty}개`).join(' / ');
+      const raws = procLedgerRawLots(r).join(', ');
+      Object.keys(r.checks || {}).sort(byNumKey).forEach(k => {
+        const c = r.checks[k], c1 = c.r1 || {}, c2 = c.r2 || {};
+        rows.push([r.meta.date, r.meta.product_label || '', r.meta.product_name || '', items, raws, c.proc || '', c.item || '', c.std || '',
+          lbl.r1 || '', xYN(c1.value), procExtras(c1, true), lbl.r2 || '', xYN(c2.value), procExtras(c2, true), c.action || '',
+          r.meta.inspector || '', r.meta.confirmer || '', approval(r), xDate(r.meta.reviewed_at), xDate(r.meta.created_at),
+          photoCount(r), r.note || '', r.confirm_note || '']);
+      });
+    });
+    return [head, ...rows];
+  }
+  if (type === 'mf_inspection') {
+    const cols = MF_CHECK_COLS;
+    const head = ['검품일자','품목','구분','해동','LOT','출고수량','샘플','원료 LOT', ...cols.map(c => c[1]), '판정','부적합 항목','검품자','확인자','결재','결재일시','등록일시','이탈사항','개선조치','조치결과','조치일자','비고'];
+    const rows = [];
+    recs.forEach(r => mfItems(r).forEach(it => {
+      const ch = it.checks || {};
+      rows.push([r.meta.date, it.name || '', it.type === 'B' ? 'B 손질' : 'A 활·생물', it.thaw ? '해동' : '', it.lot || '', it.qty ?? '', it.sample ?? '', it.raw_lots || '',
+        ...cols.map(([id]) => ch[id] ? xOX(ch[id].value) : '/'), it.judge === 'ok' ? '적합' : it.judge === 'ng' ? '부적합' : '',
+        (it.ng || []).join(', '), r.meta.inspector || '', r.meta.confirmer || '', approval(r), xDate(r.meta.reviewed_at), xDate(r.meta.created_at),
+        r.deviation || '', r.action_note || '', r.action_result || '', r.action_date || '', r.note || '']);
+    }));
+    return [head, ...rows];
+  }
+  const head = ['일자','작성자','구분','이상','결재','결재일시','등록일시','사진','기록 내용'];
+  return [head, ...recs.map(r => [r.meta.date, r.meta.inspector || r.meta.writer || '', r.meta.period || r.meta.kind_label || r.item_name || r.item || '',
+    (r.has_alert || r.has_issue) ? '이상' : '', approval(r), xDate(r.meta.reviewed_at), xDate(r.meta.created_at), photoCount(r) || '',
+    flattenDetail(r).join('\n').slice(0, 32000)])];
+}
+
+function addSheet(wb, name, rows) {
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = rows[0].map((h, i) => ({ wch: Math.min(60, Math.max(8, ...rows.slice(0, 200).map(r => String(r[i] ?? '').split('\n')[0].length + 2))) }));
+  XLSX.utils.book_append_sheet(wb, ws, name.replace(/[\\/?*\[\]:]/g, '').slice(0, 31));
+}
+
+async function exportPeriod(scope) {
+  const start = document.getElementById('start-date').value, end = document.getElementById('end-date').value;
+  if (!start || !end || start > end) { alert('조회기간을 확인하세요.'); return; }
+  const types = scope === 'all' ? Object.keys(TAB_CONFIG) : [currentTab];
+  const btns = ['btn-export-tab', 'btn-export-all'].map(id => document.getElementById(id));
+  const btn = document.getElementById(scope === 'all' ? 'btn-export-all' : 'btn-export-tab'), label = btn.textContent;
+  btns.forEach(b => b.disabled = true);
+  try {
+    const wb = XLSX.utils.book_new();
+    const summary = [['일지','기간 내 기록 수','결재완료','미결재','작성 대기']];
+    for (let i = 0; i < types.length; i++) {
+      const t = types[i];
+      btn.textContent = `불러오는 중 (${i + 1}/${types.length})`;
+      const recs = await fetchPeriodRecords(t, start, end);
+      summary.push([TAB_CONFIG[t].label, recs.length, recs.filter(r => r.meta.reviewed).length,
+        recs.filter(r => !r.meta.reviewed && r.meta.status !== 'draft').length, recs.filter(r => r.meta.status === 'draft').length]);
+      if (recs.length) addSheet(wb, TAB_CONFIG[t].label, sheetRows(t, recs));
+    }
+    summary.push([], ['기간', `${start} ~ ${end}`], ['내보낸 시각', new Date().toLocaleString('ko-KR')], ['출처', FIREBASE_URL]);
+    const s = XLSX.utils.aoa_to_sheet(summary); s['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, s, '요약');
+    wb.SheetNames.unshift(wb.SheetNames.pop());   // 요약 시트를 맨 앞으로
+    const name = scope === 'all' ? '전체' : TAB_CONFIG[currentTab].label.replace(/[\\/:*?"<>|]/g, '');
+    XLSX.writeFile(wb, `QC일지_${name}_${start}~${end}.xlsx`);
+  } catch (e) {
+    console.error(e); alert('엑셀 저장 실패 — 네트워크를 확인하세요.');
+  } finally {
+    btns.forEach(b => b.disabled = false); btn.textContent = label;
+  }
 }
 
 // ── 인쇄 ─────────────────────────────────────────────────

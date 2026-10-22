@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3a5c">
+  <title>CCP 모니터링일지 — ㈜위드프레쉬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 15px; background: #f0f2f5; color: #222; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 max(14px, env(safe-area-inset-right, 0px)) 48px max(14px, env(safe-area-inset-left, 0px)); }
+    .page-header { text-align: center; padding: 18px 0 12px; }
+    .page-header h1 { font-size: 20px; color: #1a3a5c; letter-spacing: 1px; }
+    .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+    .page-header a { color: #2e5f8a; font-size: 12px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+    .section-title { font-size: 14px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin-bottom: 12px; }
+    .section-sub { font-size: 11.5px; color: #888; font-weight: normal; margin-left: 6px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field label { display: block; font-size: 12.5px; color: #666; margin-bottom: 5px; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 48px; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 16px; font-family: inherit; background: #fff; }
+    .field textarea { min-height: 64px; resize: vertical; font-size: 14px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #1a3a5c; outline: none; }
+
+    /* CCP 탭 */
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .tab { min-height: 64px; border: 2px solid #d5dde7; border-radius: 12px; background: #fff; color: #1a3a5c; font-family: inherit; font-size: 15px; font-weight: bold; cursor: pointer; line-height: 1.3; }
+    .tab small { display: block; font-size: 12px; font-weight: normal; color: #888; }
+    .tab.on { background: #1a3a5c; border-color: #1a3a5c; color: #fff; }
+    .tab.on small { color: #c9d7e6; }
+
+    .limit { background: #f7f9fc; border: 1px solid #e3e8f0; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #444; line-height: 1.7; }
+    .limit b { color: #1a3a5c; }
+
+    /* 품목 선택 */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { min-height: 46px; padding: 8px 14px; border: 1.5px solid #d5dde7; border-radius: 24px; background: #fff; font-family: inherit; font-size: 14.5px; color: #222; cursor: pointer; }
+    .chip.on { background: #1a3a5c; border-color: #1a3a5c; color: #fff; }
+    .chip .st { font-size: 11.5px; font-weight: bold; margin-left: 4px; }
+    .chip .st.f { color: #1565c0; } .chip .st.c { color: #2e7d32; }
+    .chip.on .st { color: #ffe082; }
+    .lg-msg { font-size: 12.5px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+    .lg-msg.warn { color: #8d6e00; }
+    .manual { display: flex; gap: 8px; margin-top: 10px; }
+    .manual input { flex: 1; min-height: 46px; padding: 8px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit; }
+    .manual select { min-height: 46px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit; padding: 0 8px; }
+
+    /* 입력 행 */
+    .entry { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 4px; }
+    .f { border: 1.5px solid #e3e8f0; border-radius: 10px; padding: 10px; background: #fafcfe; min-width: 0; }
+    .f input[type="time"] { width: 100%; }
+    .info-grid > *, .entry > * { min-width: 0; }
+    .f .lb { font-size: 12.5px; color: #555; margin-bottom: 7px; line-height: 1.35; }
+    .f .lb small { display: block; color: #999; font-size: 11px; }
+    .ox { display: flex; gap: 6px; }
+    .ox button { flex: 1; min-height: 52px; border: 2px solid #ddd; border-radius: 8px; background: #fff; font-size: 22px; font-weight: bold; color: #aaa; cursor: pointer; font-family: inherit; }
+    .ox button.ok.on { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+    .ox button.ng.on { background: #ffebee; border-color: #c62828; color: #c62828; }
+    .num { display: flex; align-items: center; gap: 6px; }
+    .num input { flex: 1; min-width: 0; min-height: 52px; padding: 6px; border: 2px solid #ddd; border-radius: 8px; font-size: 22px; text-align: center; font-family: inherit; }
+    .num input.bad { border-color: #c62828; background: #fff5f5; }
+    .num span { font-size: 14px; color: #777; }
+    .time-row { display: flex; gap: 6px; }
+    .time-row input { flex: 1; min-width: 0; min-height: 52px; border: 2px solid #ddd; border-radius: 8px; font-size: 20px; text-align: center; font-family: inherit; }
+    .btn-now { min-height: 52px; padding: 0 12px; border: 1.5px solid #2e5f8a; border-radius: 8px; background: #fff; color: #2e5f8a; font-weight: bold; font-family: inherit; cursor: pointer; }
+
+    .judge-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #eceff1; font-weight: bold; }
+    .judge-bar.ok { background: #e8f5e9; color: #2e7d32; }
+    .judge-bar.ng { background: #ffebee; color: #c62828; }
+    .judge-bar .why { font-size: 12.5px; font-weight: normal; }
+    .btn-add { width: 100%; min-height: 60px; margin-top: 12px; border: none; border-radius: 12px; background: #1a3a5c; color: #fff; font-size: 18px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; }
+    .btn-add:disabled { background: #aab; }
+
+    /* 기록 표 */
+    .tbl-wrap { overflow-x: auto; border: 1px solid #e3e8f0; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { background: #f1f4f8; color: #555; font-size: 12px; padding: 8px 6px; border-bottom: 1px solid #dde3ea; white-space: nowrap; }
+    td { padding: 9px 6px; border-top: 1px solid #eef1f4; text-align: center; white-space: nowrap; }
+    td.l { text-align: left; white-space: normal; min-width: 130px; }
+    .o { color: #2e7d32; font-weight: bold; } .x { color: #c62828; font-weight: bold; }
+    .empty { text-align: center; color: #aaa; padding: 18px 0; font-size: 13.5px; }
+    .btn-mini { min-height: 38px; padding: 0 10px; border: 1.5px solid #2e5f8a; border-radius: 6px; background: #fff; color: #2e5f8a; font-weight: bold; font-family: inherit; cursor: pointer; }
+    .lock { background: #e8f5e9; color: #2e7d32; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
+    .btn-save { min-height: 50px; padding: 0 20px; border: none; border-radius: 10px; background: #2e5f8a; color: #fff; font-size: 15px; font-weight: bold; font-family: inherit; cursor: pointer; margin-top: 10px; }
+
+    .toast { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 13px 22px; border-radius: 24px; font-size: 14.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+    .toast.show { opacity: 1; } .toast.success { background: #2e7d32; } .toast.error { background: #c62828; }
+    @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } .tab { font-size: 13.5px; } .entry { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>중요관리점(CCP) 모니터링일지</h1>
+    <p>㈜위드프레쉬 · 작업 시작 시 / 작업 중 2시간마다 / 제품 변경 시 · <a href="index.html">메뉴</a> · <a href="review.html">조회·결재</a></p>
+  </div>
+
+  <div class="card">
+    <div class="info-grid">
+      <div class="field"><label for="date">작성일자</label><input type="date" id="date" onchange="onDateChange()"></div>
+      <div class="field"><label for="inspector">점검자 (서명)</label>
+        <select id="inspector" onchange="saveInspector()">
+          <option value="">선택하세요</option>
+          <option>전혜진 계장</option>
+          <option>김현우 부장</option>
+          <option value="__other">직접 입력</option>
+        </select>
+        <input id="inspector_other" placeholder="점검자 이름" hidden style="margin-top:6px;" oninput="saveInspector()">
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" data-ccp="1B" onclick="switchCcp('1B')">CCP-1B<small>세척 공정</small></button>
+    <button class="tab" data-ccp="1BC" onclick="switchCcp('1BC')">CCP-1BC<small>소독 및 헹굼</small></button>
+    <button class="tab" data-ccp="2P" onclick="switchCcp('2P')">CCP-2P<small>금속검출</small></button>
+  </div>
+
+  <div class="card">
+    <div class="section-title" id="limit-title">한계기준</div>
+    <div class="limit" id="limit-box"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><span id="prod-title">① 품명 선택</span> <span class="section-sub" id="prod-sub">김현우 부장 생산·물류일보 기준</span></div>
+    <div class="lg-msg" id="prod-msg">일보 불러오는 중…</div>
+    <div class="chips" id="chips"></div>
+    <div class="manual">
+      <input id="manual-name" placeholder="목록에 없으면 직접 입력">
+      <select id="manual-st"><option value="냉동">냉동</option><option value="냉장">냉장</option></select>
+      <button class="btn-mini" onclick="pickManual()">선택</button>
+    </div>
+  </div>
+
+  <div class="card" id="entry-card">
+    <div class="section-title" id="entry-title">② 측정 기록</div>
+    <div id="entry"></div>
+    <div class="judge-bar" id="judge-bar"><span id="judge-text">판정: 입력 대기</span><span class="why" id="judge-why"></span></div>
+    <button class="btn-add" id="btn-add" onclick="addRow()">기록 추가</button>
+  </div>
+
+  <div class="card" id="pass-card" hidden>
+    <div class="section-title">금속검출기 제품 통과 <span class="section-sub">품명 선택 → 통과 시작 → 끝나면 [통과 종료]</span></div>
+    <div class="entry">
+      <div class="f"><div class="lb">최초 통과시간</div><div class="time-row"><input type="time" id="pass-start"><button class="btn-now" onclick="setNow('pass-start')">지금</button></div></div>
+      <div class="f"><div class="lb">검출량<small>검출된 개수 (없으면 0)</small></div><div class="num"><input type="number" inputmode="numeric" min="0" id="pass-qty"><span>개</span></div></div>
+      <div class="f"><div class="lb">이탈 유무</div><div class="ox"><button class="ok" id="pass-dev-no" onclick="setPassDev(false)">무</button><button class="ng" id="pass-dev-yes" onclick="setPassDev(true)">유</button></div></div>
+      <div class="f"><div class="lb">특이사항</div><input id="pass-note" style="width:100%;min-height:52px;border:2px solid #ddd;border-radius:8px;padding:6px 10px;font-size:15px;font-family:inherit;"></div>
+    </div>
+    <button class="btn-add" style="background:#2e5f8a;" onclick="addPass()">제품 통과 시작 기록</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title" id="list-title">오늘 기록</div>
+    <div id="lock-box"></div>
+    <div id="rows"></div>
+    <div id="passes"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">한계기준 이탈 및 개선조치</div>
+    <div class="field" style="margin-bottom:10px;"><label for="dev-text">한계기준 이탈내용</label><textarea id="dev-text" placeholder="예) 10:30 2차 세척시간 15초 (기준 20초 이상)"></textarea></div>
+    <div class="field" style="margin-bottom:10px;"><label for="dev-action">개선조치 및 결과</label><textarea id="dev-action" placeholder="예) 세척시간 재조정 후 재세척, 샘플 확인 이상 없음"></textarea></div>
+    <div class="field"><label for="dev-by">조치자</label><input id="dev-by"></div>
+    <button class="btn-save" onclick="saveDeviation()">이탈·개선조치 저장</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';   // QC 일지 저장소
+const LEDGER_URL   = 'https://widfresh-erplot-default-rtdb.asia-southeast1.firebasedatabase.app';   // 쿠팡 수불대장(생산·물류일보)
+const LOG_PATH = 'ccp_monitor_logs';   // ccp_monitor_logs/{YYYY}/{MM}/{YYYY-MM-DD}_{1B|1BC|2P}
+// =============================================
+
+// ── CCP 정의 (실물 양식 19~21: CCP-1B / CCP-1BC / CCP-2P) ──
+// 입력 종류: ox(○/× 버튼) · num(숫자) — check(row)가 한계기준 이탈 사유 목록을 돌려줌
+const CCPS = {
+  '1B': {
+    label: 'CCP-1B 세척 공정',
+    limit: '<b>세척횟수</b> 2회 · <b>세척수량</b> 350~400ℓ · <b>세척시간</b> 20~40초 · <b>세척수 교체주기</b> 300kg 이내 · <b>1회 원물량</b> 10kg 이내<br>' +
+           '모니터링: 세척수량 육안(눈금표시) · 원물량 저울 · 세척시간 타이머 · 세척수 교체주기 계수기',
+    fields: [
+      { k: 'raw_kg', t: 'num', label: '원물량', sub: '1회 10kg 이내', unit: 'kg', step: '0.1' },
+      { k: 'w1_vol', t: 'ox',  label: '1차 세척수량', sub: '350L 이상 (눈금표시 이상)' },
+      { k: 'w1_sec', t: 'num', label: '1차 세척시간', sub: '20~40초', unit: '초' },
+      { k: 'w2_vol', t: 'ox',  label: '2차 세척수량', sub: '350L 이상 (눈금표시 이상)' },
+      { k: 'w2_sec', t: 'num', label: '2차 세척시간', sub: '20~40초', unit: '초' },
+      { k: 'change', t: 'ox',  label: '세척수 교체', sub: '300kg 이내 교체' },
+    ],
+    check: r => {
+      const e = [];
+      if (r.raw_kg > 10) e.push('원물량 10kg 초과');
+      if (r.w1_vol === 'ng') e.push('1차 세척수량');
+      if (r.w1_sec < 20 || r.w1_sec > 40) e.push('1차 세척시간');
+      if (r.w2_vol === 'ng') e.push('2차 세척수량');
+      if (r.w2_sec < 20 || r.w2_sec > 40) e.push('2차 세척시간');
+      if (r.change === 'ng') e.push('세척수 교체주기');
+      return e;
+    },
+    cols: [['raw_kg', '원물량(kg)'], ['w1_vol', '1차 수량'], ['w1_sec', '1차 시간(초)'], ['w2_vol', '2차 수량'], ['w2_sec', '2차 시간(초)'], ['change', '세척수 교체']],
+  },
+  '1BC': {
+    label: 'CCP-1BC 소독 및 헹굼 공정',
+    limit: '<b>소독</b> 1회(1차 소독, 2차 헹굼) · <b>소독농도</b> 차아염소산나트륨 100~150ppm · <b>소독시간</b> 5~6분 · <b>1회 소독량</b> 10kg 이내 · <b>소독수 교체</b> 300kg 이내<br>' +
+           '<b>헹굼</b> 1회 · <b>헹굼수량</b> 350~400ℓ · <b>헹굼시간</b> 30~45초 · <b>헹굼수 교체</b> 300kg 이내 · <b>잔류염소</b> 4ppm 이하<br>' +
+           '모니터링: 소독농도 농도측정지 · 소독·헹굼시간 타이머 · 헹굼수량 육안(눈금표시) · 원물량 저울 · 교체주기 계수기',
+    fields: [
+      { k: 'raw_kg',   t: 'num', label: '원물량', sub: '1회 10kg 이내', unit: 'kg', step: '0.1' },
+      { k: 'conc',     t: 'ox',  label: '소독농도', sub: '100~150ppm (측정지)' },
+      { k: 'dis_min',  t: 'num', label: '소독시간 (분)', sub: '5~6분', unit: '분' },
+      { k: 'dis_sec',  t: 'num', label: '소독시간 (초)', sub: '분 뒤 초', unit: '초' },
+      { k: 'rinse_vol',t: 'ox',  label: '헹굼수량', sub: '350L 이상 (눈금표시 이상)' },
+      { k: 'rinse_sec',t: 'num', label: '헹굼시간', sub: '30~45초', unit: '초' },
+      { k: 'chlorine', t: 'ox',  label: '잔류염소', sub: '4ppm 이하' },
+      { k: 'change',   t: 'ox',  label: '헹굼수/소독수 교체', sub: '300kg 이내 교체' },
+    ],
+    check: r => {
+      const e = [], dis = (r.dis_min || 0) * 60 + (r.dis_sec || 0);
+      if (r.raw_kg > 10) e.push('원물량 10kg 초과');
+      if (r.conc === 'ng') e.push('소독농도');
+      if (dis < 300 || dis > 360) e.push('소독시간');
+      if (r.rinse_vol === 'ng') e.push('헹굼수량');
+      if (r.rinse_sec < 30 || r.rinse_sec > 45) e.push('헹굼시간');
+      if (r.chlorine === 'ng') e.push('잔류염소');
+      if (r.change === 'ng') e.push('교체주기');
+      return e;
+    },
+    cols: [['raw_kg', '원물량(kg)'], ['conc', '소독농도'], ['dis', '소독시간'], ['rinse_vol', '헹굼수량'], ['rinse_sec', '헹굼시간(초)'], ['chlorine', '잔류염소'], ['change', '교체']],
+  },
+  '2P': {
+    label: 'CCP-2P 금속검출 공정',
+    limit: '○ 금속이물 <b>냉장제품</b> Fe 3.0mmΦ · STS 5.0mmΦ 이상 불검출 &nbsp; ○ <b>냉동제품</b> Fe 2.5mmΦ · STS 4.0mmΦ 이상 불검출<br>' +
+           '주기: 정상작동 확인 — 작업 시작 시, 작업 중 2시간마다, 작업 종료 시 / 공정품 확인 — 작업 중 상시<br>' +
+           '감도 판정: <b>검출 ○ · 불검출 ×</b> — 정상이면 Fe·STS(단독·제품 위) 모두 ○, 제품만 통과는 ×',
+    fields: [
+      { k: 'fe',     t: 'ox', label: 'Fe만 통과', sub: '정상: 검출 ○', expect: 'ok' },
+      { k: 'sts',    t: 'ox', label: 'STS만 통과', sub: '정상: 검출 ○', expect: 'ok' },
+      { k: 'prod',   t: 'ox', label: '제품만 통과', sub: '정상: 불검출 × (좌·중·우)', expect: 'ng' },
+      { k: 'fe_p',   t: 'ox', label: 'Fe + 제품 통과', sub: '정상: 검출 ○', expect: 'ok' },
+      { k: 'sts_p',  t: 'ox', label: 'STS + 제품 통과', sub: '정상: 검출 ○', expect: 'ok' },
+    ],
+    check: r => ['fe', 'sts', 'prod', 'fe_p', 'sts_p'].filter(k => r[k] !== CCPS['2P'].fields.find(f => f.k === k).expect)
+      .map(k => CCPS['2P'].fields.find(f => f.k === k).label),
+    cols: [['fe', 'Fe만'], ['sts', 'STS만'], ['prod', '제품만'], ['fe_p', 'Fe+제품'], ['sts_p', 'STS+제품']],
+    oxText: { ok: '○', ng: '×' },
+  },
+};
+
+let ccp = '1B', REC = null, PICK = null, ENTRY = {}, PASS_DEV = null;
+let LEDGER_OUT = null;
+let RAW_NAMES = null;   // 일보 names: 원료코드 → 원료명
+let loadSeq = 0;        // 품목 목록 요청 순번 (탭을 빨리 바꿔도 마지막 결과만 표시)
+
+// ── 공통 ──
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function setNow(id) { $(id).value = nowHM(); }
+function inspectorName() { const v = $('inspector').value; return v === '__other' ? $('inspector_other').value.trim() : v; }
+function recPath() { const d = $('date').value; return `${LOG_PATH}/${d.slice(0, 4)}/${d.slice(5, 7)}/${d}_${ccp}`; }
+function showToast(msg, type) { const t = $('toast'); t.textContent = msg; t.className = `toast show ${type || ''}`; setTimeout(() => { t.className = 'toast'; }, 3000); }
+async function fb(path, method, body) {
+  const r = await fetch(`${FIREBASE_URL}/${path}.json`, method ? { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// 점검자는 이 기기에 기억 (태블릿 한 대를 같은 사람이 계속 쓰는 경우)
+function saveInspector() {
+  $('inspector_other').hidden = $('inspector').value !== '__other';
+  try { localStorage.setItem('ccp_inspector', $('inspector').value); localStorage.setItem('ccp_inspector_other', $('inspector_other').value); } catch (e) {}
+}
+(function init() {
+  const q = new URLSearchParams(location.search);
+  $('date').value = /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : todayStr();
+  try { const v = localStorage.getItem('ccp_inspector'); if (v) { $('inspector').value = v; $('inspector_other').value = localStorage.getItem('ccp_inspector_other') || ''; } } catch (e) {}
+  $('inspector_other').hidden = $('inspector').value !== '__other';
+  switchCcp(['1B', '1BC', '2P'].includes(q.get('ccp')) ? q.get('ccp') : '1B');
+})();
+
+function onDateChange() { PICK = null; loadProducts(); loadRecord(); }
+
+function switchCcp(c) {
+  ccp = c; PICK = null;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.ccp === c));
+  $('limit-title').textContent = '한계기준 · ' + CCPS[c].label;
+  $('limit-box').innerHTML = CCPS[c].limit;
+  $('entry-title').textContent = c === '2P' ? '② 금속검출기 감도 모니터링' : '② 측정 기록';
+  $('pass-card').hidden = c !== '2P';
+  $('prod-title').textContent = c === '2P' ? '① 품명 선택' : '① 원료명 선택';
+  $('prod-sub').textContent = c === '2P' ? '생산·물류일보 완제품 기준' : c === '1BC' ? '생산·물류일보 · 게장(절임류) 투입 원료' : '생산·물류일보 · 투입 원료 (게장 원료 제외)';
+  $('manual-st').hidden = c !== '2P';
+  $('manual-name').placeholder =c === '2P' ? '목록에 없으면 품명 직접 입력' : '목록에 없으면 원료명 직접 입력 (예: 꽃게)';
+  renderEntry(); loadProducts(); loadRecord();
+}
+
+// ── 품명: 생산·물류일보 ──
+function storageOf(o) {
+  const n = (o.pname || '') + (o.memo || '');
+  if (o.ch === 'MF' || /냉장|생물|생굴|활 |활새우|오만둥이|멍게/.test(n)) return '냉장';
+  return '냉동';
+}
+const shortName = n => String(n || '').replace(/^위드프레쉬[\s_]*(산지직송\s*)?/, '').replace(/\s*1개$/, '').trim();
+const isGejang = n => /게장/.test(n);
+
+// 원료명 간단히 — 세척(1B)·소독헹굼(1BC)은 원료 단위로 기록 (꽃게, 오징어, 갑오징어 …)
+function rawShort(n) {
+  n = String(n || '');
+  if (/마른오징어|반건조/.test(n)) return null;          // 가공 원료 아님
+  if (/꽃게|암게/.test(n)) return '꽃게';
+  if (/갑오징어/.test(n)) return '갑오징어';
+  if (/원양산\s*오징어/.test(n)) return '오징어(원양산)';
+  if (/오징어\(생물\)/.test(n)) return '오징어(생물)';
+  if (/오징어/.test(n)) return '오징어';
+  if (/생굴/.test(n)) return '굴(생물)';
+  if (/굴/.test(n)) return '굴';
+  if (/우렁/.test(n)) return '우렁살';
+  if (/자숙홍합살/.test(n)) return '홍합살';
+  if (/냉동멍게/.test(n)) return '멍게';
+  return n.replace(/^국내산/, '').replace(/B\/T/i, '').replace(/\s*\d+(\.\d+)?\s*(kg|g)?\s*[×x]?\s*\d*\s*(박스|단)?.*$/i, '')
+          .replace(/KG$/i, '').replace(/\s*\d+단.*$/, '').trim() || n;
+}
+
+async function loadProducts() {
+  const date = $('date').value, seq = ++loadSeq;
+  $('prod-msg').className = 'lg-msg'; $('prod-msg').textContent = '일보 불러오는 중…'; $('chips').innerHTML = '';
+  try {
+    if (!LEDGER_OUT) {
+      const d = await fetch(`${LEDGER_URL}/쿠팡수불/out.json`).then(r => r.json());
+      LEDGER_OUT = (Array.isArray(d) ? d : Object.values(d || {})).filter(Boolean);
+    }
+    if (!RAW_NAMES && ccp !== '2P') {
+      const d = await fetch(`${LEDGER_URL}/쿠팡수불/names.json`).then(r => r.json());
+      RAW_NAMES = {}; (Array.isArray(d) ? d : Object.values(d || {})).forEach(x => { if (Array.isArray(x)) RAW_NAMES[x[0]] = x[1]; });
+    }
+    // CCP-1BC(소독·헹굼)는 절임류(게장) 원료만, CCP-1B(세척)는 게장 외 원료 / CCP-2P(금속검출)는 완제품명
+    const toList = rows => {
+      const m = new Map();
+      rows.forEach(o => {
+        if (/마른오징어|반건조오징어/.test(o.pname || '')) return;
+        const pname = shortName(o.pname);
+        if (ccp === '2P') {
+          const x = m.get(pname) || { name: pname, st: storageOf(o), qty: 0 };
+          x.qty += Number(o.qty) || 0; m.set(pname, x);
+          return;
+        }
+        if (ccp === '1BC' && !isGejang(pname)) return;
+        if (ccp === '1B' && isGejang(pname)) return;
+        (Array.isArray(o.raws) ? o.raws : Object.values(o.raws || {})).forEach(r => {
+          if (!r || r.sauce || r.byproduct || !/^R-/.test(r.code || '')) return;
+          const name = rawShort(RAW_NAMES[r.code] || r.code); if (!name) return;
+          // 원료 보관: (생물)·MF 전용 원료·오만둥이/멍게/생굴은 냉장, 나머지는 냉동
+          const x = m.get(name) || { name, qty: 0, lots: new Set(), mfOnly: true };
+          if (o.ch !== 'MF') x.mfOnly = false;
+          x.st = (/\(생물\)/.test(name) || x.mfOnly || /오만둥이|멍게|굴\(생물\)/.test(name)) ? '냉장' : '냉동';
+          x.qty += Number(r.kg || r.qty) || 0;
+          String(r.lot || '').split(',').forEach(l => l.trim() && x.lots.add(l.trim()));
+          m.set(name, x);
+        });
+      });
+      return [...m.values()].sort((a, b) => b.qty - a.qty);
+    };
+    let list = toList(LEDGER_OUT.filter(o => o.date === date)), msg, warn = false;
+    if (list.length) msg = `${date} 일보 품목 ${list.length}개 — 측정할 품명을 누르세요.`;
+    else {   // 그날 일보가 아직 없거나(오전) 해당 품목이 없으면 최근 30일 생산 품목
+      const from = new Date(date + 'T00:00:00'); from.setDate(from.getDate() - 30);
+      const fromStr = from.toISOString().slice(0, 10);
+      list = toList(LEDGER_OUT.filter(o => o.date < date && o.date >= fromStr));
+      warn = true;
+      msg = list.length ? `${date} 일보에 이 공정 품목이 아직 없어 최근 30일 생산 품목을 보여줍니다. 오늘 만드는 품명을 고르거나 직접 입력하세요.`
+                        : '해당 품목이 없습니다. 직접 입력하세요.';
+    }
+    if (seq !== loadSeq) return;
+    if (ccp !== '2P') msg = msg.replace('일보 품목', '일보 원료').replace('공정 품목이', '공정 원료가').replace('생산 품목을', '투입 원료를').replace('품명을', '원료명을').replace('해당 품목', '해당 원료');
+    $('prod-msg').className = 'lg-msg' + (warn ? ' warn' : '');
+    $('prod-msg').textContent = msg;
+    // 냉동/냉장 표시는 금속검출(2P)만 — 한계기준이 보관형태별로 다름
+    $('chips').innerHTML = list.map((p, i) => `<button class="chip" data-i="${i}">${esc(p.name)}${ccp === '2P' ? `<span class="st ${p.st === '냉동' ? 'f' : 'c'}">${p.st}</span>` : ''}</button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => pick(list[+b.dataset.i], b));
+  } catch (e) {
+    console.error(e);
+    $('prod-msg').className = 'lg-msg warn'; $('prod-msg').textContent = '일보를 불러오지 못했습니다 — 품명을 직접 입력하세요.';
+  }
+}
+function pick(p, btn) {
+  PICK = { name: p.name, st: ccp === '2P' ? p.st : '', lots: p.lots ? [...p.lots].sort().join(', ') : '' };
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === btn));
+  refreshJudge();
+}
+function pickManual() {
+  const n = $('manual-name').value.trim(); if (!n) { showToast('품명을 입력하세요.', 'error'); return; }
+  PICK = { name: n, st: ccp === '2P' ? $('manual-st').value : '' };
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  showToast(`${n}${PICK.st ? ` (${PICK.st})` : ''} 선택`, 'success'); refreshJudge();
+}
+
+// ── 측정 입력 ──
+function renderEntry() {
+  ENTRY = {};
+  const c = CCPS[ccp], oxT = c.oxText || { ok: '○', ng: '×' };
+  $('entry').innerHTML = `<div class="entry">
+    <div class="f"><div class="lb">${ccp === '2P' ? '통과 시간' : '측정 시각'}<small>누른 시각이 자동 입력</small></div>
+      <div class="time-row"><input type="time" id="e-time"><button class="btn-now" onclick="setNow('e-time')">지금</button></div></div>
+    ${c.fields.map(f => `<div class="f"><div class="lb">${f.label}<small>${f.sub || ''}</small></div>${f.t === 'ox'
+      ? `<div class="ox"><button class="ok" id="ox-${f.k}-ok" onclick="setOX('${f.k}','ok')">${oxT.ok}</button><button class="ng" id="ox-${f.k}-ng" onclick="setOX('${f.k}','ng')">${oxT.ng}</button></div>`
+      : `<div class="num"><input type="number" inputmode="decimal" step="${f.step || '1'}" min="0" id="n-${f.k}" oninput="setNum('${f.k}')"><span>${f.unit || ''}</span></div>`}</div>`).join('')}
+  </div>`;
+  setNow('e-time');
+  refreshJudge();
+}
+function setOX(k, v) {
+  ENTRY[k] = ENTRY[k] === v ? undefined : v;
+  ['ok', 'ng'].forEach(s => $(`ox-${k}-${s}`).classList.toggle('on', ENTRY[k] === s));
+  refreshJudge();
+}
+function setNum(k) { const v = $('n-' + k).value; ENTRY[k] = v === '' ? undefined : parseFloat(v); refreshJudge(); }
+
+function missingFields() { return CCPS[ccp].fields.filter(f => ENTRY[f.k] === undefined || Number.isNaN(ENTRY[f.k])).map(f => f.label); }
+function refreshJudge() {
+  const miss = missingFields(), bar = $('judge-bar');
+  if (!PICK || miss.length) {
+    bar.className = 'judge-bar';
+    $('judge-text').textContent = '판정: 입력 대기';
+    $('judge-why').textContent = !PICK ? '품명을 먼저 선택하세요' : '남은 항목: ' + miss.join(', ');
+    return;
+  }
+  const errs = CCPS[ccp].check(ENTRY);
+  bar.className = 'judge-bar ' + (errs.length ? 'ng' : 'ok');
+  $('judge-text').textContent = errs.length ? '판정: × 부적합 (한계기준 이탈)' : '판정: ○ 적합';
+  $('judge-why').textContent = errs.length ? '이탈: ' + errs.join(', ') : PICK.name + (PICK.st ? ' · ' + PICK.st : '');
+  CCPS[ccp].fields.forEach(f => { if (f.t === 'num') $('n-' + f.k).classList.toggle('bad', errs.some(e => e.indexOf(f.label.replace(/ \(.+\)/, '')) >= 0)); });
+}
+
+// ── 저장 (한 줄씩 추가) ──
+function metaPatch(date) {
+  const p = { 'meta/date': date, 'meta/ccp': ccp, 'meta/ccp_label': CCPS[ccp].label, 'meta/inspector': inspectorName(), 'meta/updated_at': Date.now() };
+  if (!REC || !REC.meta || !REC.meta.created_at) Object.assign(p, { 'meta/created_at': Date.now(), 'meta/reviewed': false, 'meta/reviewed_at': null });
+  return p;
+}
+function guard() {
+  if (!$('date').value) { showToast('작성일자를 선택하세요.', 'error'); return false; }
+  if (!inspectorName()) { showToast('점검자를 선택하세요.', 'error'); return false; }
+  if (REC && REC.meta && REC.meta.reviewed) { showToast('결재 완료된 일지입니다. 추가 기록이 필요하면 확인자에게 문의하세요.', 'error'); return false; }
+  return true;
+}
+async function addRow() {
+  if (!guard()) return;
+  if (!PICK) { showToast('품명을 선택하세요.', 'error'); return; }
+  const miss = missingFields(); if (miss.length) { showToast('입력하지 않은 항목: ' + miss.join(', '), 'error'); return; }
+  const time = $('e-time').value; if (!time) { showToast('시각을 입력하세요.', 'error'); return; }
+  const errs = CCPS[ccp].check(ENTRY);
+  const row = Object.assign({ name: PICK.name, storage: PICK.st, raw_lots: PICK.lots || '', time, judge: errs.length ? 'ng' : 'ok', deviations: errs, sign: inspectorName(), entered_at: Date.now() }, ENTRY);
+  const id = 'r' + Date.now().toString(36);
+  const date = $('date').value;
+  const patch = Object.assign(metaPatch(date), { ['rows/' + id]: row });
+  if (errs.length) patch.has_alert = true;
+  $('btn-add').disabled = true;
+  try {
+    await fb(recPath(), 'PATCH', patch);
+    showToast(errs.length ? '기록 저장 — 이탈 내용과 개선조치를 아래에 적어 주세요.' : '기록 저장 ✓', errs.length ? 'error' : 'success');
+    renderEntry(); await loadRecord();
+  } catch (e) { console.error(e); showToast('저장 실패 — 네트워크를 확인하세요.', 'error'); }
+  finally { $('btn-add').disabled = false; }
+}
+
+// 2P 제품 통과
+function setPassDev(v) { PASS_DEV = PASS_DEV === v ? null : v; $('pass-dev-no').classList.toggle('on', PASS_DEV === false); $('pass-dev-yes').classList.toggle('on', PASS_DEV === true); }
+async function addPass() {
+  if (!guard()) return;
+  if (!PICK) { showToast('품명을 선택하세요.', 'error'); return; }
+  if (!$('pass-start').value) setNow('pass-start');
+  const id = 'p' + Date.now().toString(36);
+  const qty = $('pass-qty').value === '' ? null : parseFloat($('pass-qty').value);
+  const pass = { name: PICK.name, storage: PICK.st, start: $('pass-start').value, end: null, detect_qty: qty, deviation: PASS_DEV, note: $('pass-note').value.trim(), sign: inspectorName(), entered_at: Date.now() };
+  const patch = Object.assign(metaPatch($('date').value), { ['passes/' + id]: pass });
+  if (PASS_DEV === true || qty > 0) patch.has_alert = true;
+  try {
+    await fb(recPath(), 'PATCH', patch);
+    showToast('제품 통과 시작 기록 ✓', 'success');
+    $('pass-start').value = ''; $('pass-qty').value = ''; $('pass-note').value = ''; setPassDev(PASS_DEV);
+    await loadRecord();
+  } catch (e) { console.error(e); showToast('저장 실패 — 네트워크를 확인하세요.', 'error'); }
+}
+async function endPass(id) {
+  if (!guard()) return;
+  const p = REC.passes[id];
+  const qtyEl = $('pq-' + id), devEl = $('pd-' + id);
+  const qty = qtyEl.value === '' ? p.detect_qty : parseFloat(qtyEl.value);
+  if (qty === null || qty === undefined || Number.isNaN(qty)) { showToast('검출량을 입력하세요 (없으면 0).', 'error'); return; }
+  const dev = devEl.value === '' ? null : devEl.value === '유';
+  if (dev === null) { showToast('이탈 유무를 고르세요.', 'error'); return; }
+  const patch = { ['passes/' + id + '/end']: nowHM(), ['passes/' + id + '/detect_qty']: qty, ['passes/' + id + '/deviation']: dev, 'meta/updated_at': Date.now() };
+  if (dev || qty > 0) patch.has_alert = true;
+  try { await fb(recPath(), 'PATCH', patch); showToast('통과 종료 기록 ✓', 'success'); await loadRecord(); }
+  catch (e) { console.error(e); showToast('저장 실패', 'error'); }
+}
+
+async function saveDeviation() {
+  if (!guard()) return;
+  const patch = Object.assign(metaPatch($('date').value), { deviation: { text: $('dev-text').value.trim(), action: $('dev-action').value.trim(), by: $('dev-by').value.trim(), saved_at: Date.now() } });
+  try { await fb(recPath(), 'PATCH', patch); showToast('이탈·개선조치 저장 ✓', 'success'); await loadRecord(); }
+  catch (e) { console.error(e); showToast('저장 실패', 'error'); }
+}
+
+// ── 오늘 기록 표시 ──
+const oxCell = (v, c) => { const t = (c && c.oxText) || { ok: '○', ng: '×' }; return v === 'ok' ? `<span class="o">${t.ok}</span>` : v === 'ng' ? `<span class="x">${t.ng}</span>` : ''; };
+async function loadRecord() {
+  const c = CCPS[ccp];
+  $('list-title').textContent = `${$('date').value} 기록 · ${c.label}`;
+  try { REC = await fb(recPath()); } catch (e) { REC = null; }
+  REC = REC || {};
+  $('lock-box').innerHTML = REC.meta && REC.meta.reviewed ? `<div class="lock">✔ 결재 완료 — ${esc(REC.meta.confirmed_by || '')}</div>` : '';
+  const rows = Object.entries(REC.rows || {}).sort((a, b) => (a[1].time || '').localeCompare(b[1].time || ''));
+  $('rows').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>${ccp === '2P' ? '품명' : '원료명'}</th><th>${ccp === '2P' ? '통과시간' : '측정시각'}</th>${c.cols.map(x => `<th>${x[1]}</th>`).join('')}<th>판정</th><th>서명</th></tr></thead><tbody>
+    ${rows.map(([, r]) => `<tr><td class="l">${esc(r.name)}${r.storage ? ` <small style="color:#888;">(${esc(r.storage)})</small>` : ''}</td><td>${esc(r.time)}</td>
+      ${c.cols.map(([k]) => `<td>${k === 'dis' ? `${r.dis_min ?? ''}' ${r.dis_sec ?? ''}"` : CCPS[ccp].fields.find(f => f.k === k && f.t === 'ox') ? oxCell(r[k], c) : esc(r[k] ?? '')}</td>`).join('')}
+      <td>${r.judge === 'ok' ? '<span class="o">○</span>' : '<span class="x">×</span>'}</td><td>${esc(r.sign || '')}</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty">아직 기록이 없습니다. 위에서 품명을 고르고 측정값을 넣은 뒤 [기록 추가]를 누르세요.</div>';
+  const passes = Object.entries(REC.passes || {}).sort((a, b) => (a[1].start || '').localeCompare(b[1].start || ''));
+  $('passes').innerHTML = ccp !== '2P' ? '' : `<div class="section-title" style="margin-top:16px;">금속검출기 제품 통과</div>` + (passes.length ? `<div class="tbl-wrap"><table>
+    <thead><tr><th>품명</th><th>최초통과</th><th>통과종료</th><th>검출량</th><th>이탈</th><th>특이사항</th><th></th></tr></thead><tbody>
+    ${passes.map(([id, p]) => `<tr><td class="l">${esc(p.name)} <small style="color:#888;">(${esc(p.storage || '')})</small></td><td>${esc(p.start)}</td><td>${esc(p.end || '—')}</td>
+      ${p.end ? `<td>${p.detect_qty ?? ''}</td><td>${p.deviation === true ? '<span class="x">유</span>' : p.deviation === false ? '무' : ''}</td><td class="l">${esc(p.note || '')}</td><td></td>`
+      : `<td><input id="pq-${id}" type="number" inputmode="numeric" min="0" value="${p.detect_qty ?? ''}" style="width:70px;min-height:40px;font-size:16px;text-align:center;"></td>
+         <td><select id="pd-${id}" style="min-height:40px;font-size:15px;"><option value="">선택</option><option ${p.deviation === false ? 'selected' : ''}>무</option><option ${p.deviation === true ? 'selected' : ''}>유</option></select></td>
+         <td class="l">${esc(p.note || '')}</td><td><button class="btn-mini" onclick="endPass('${id}')">통과 종료</button></td>`}</tr>`).join('')}
+    </tbody></table></div>` : '<div class="empty">제품 통과 기록이 없습니다.</div>');
+  const dv = REC.deviation || {};
+  $('dev-text').value = dv.text || ''; $('dev-action').value = dv.action || ''; $('dev-by').value = dv.by || '';
+}
+</script>
+</body>
+</html>
