@@ -1232,7 +1232,41 @@ const PROC_FIELDS = {
   p3:    { label: '수량',  unit: '토막' },
 };
 
+// 보관 후 재계량(감량률 확인) 기록 — process_log.html 의 'wl1' 행 (2026.11.02 추가)
+// 저장 필드: label_w 표시중량 · pack_w 포장 직후 · store_w 보관 후 · loss_rate 감량률 · hours 보관시간
+function procLossDetail(r, asText) {
+  if (!r || (r.pack_w == null && r.store_w == null)) return '';
+  const f = v => v == null || v === '' ? '—' : `${v}g`;
+  const label = r.label_w, pack = r.pack_w, store = r.store_w;
+  const loss = pack != null && store != null ? Math.round((pack - store) * 10) / 10 : null;
+  const rate = r.loss_rate != null ? r.loss_rate
+             : (pack > 0 && store != null ? Math.round((pack - store) / pack * 10000) / 100 : null);
+  const h = r.hours || 24;
+  const low = label != null && [pack, store].some(v => v != null && v < label);
+  const lines = [
+    `표시중량 ${f(label)}`,
+    `포장 직후 ${f(pack)}`,
+    `${h}h 보관 후 ${f(store)}`,
+    `감량 ${loss == null ? '—' : loss + 'g'}`,
+    `감량률 ${rate == null ? '—' : Number(rate).toFixed(2) + '%'}`,
+  ];
+  if (label != null && pack != null && store != null) lines.push(low ? '표시중량 미달' : '표시중량 이상 유지');
+  if (asText) return lines.join(' / ');
+  return lines.map((t, i) => {
+    if (i === 4) return `<b style="color:#1a3a5c;">${t}</b>`;
+    if (i === 5) return `<b style="color:${low ? '#c62828' : '#2e7d32'};">${t}</b>`;
+    return t;
+  }).join('<br>');
+}
+// 공정관리 행 정렬: p1, p2 ... 다음에 추가 행(wl1 등)
+const procKeySort = (a, b) => {
+  const pa = /^p\d+$/.test(a), pb = /^p\d+$/.test(b);
+  if (pa !== pb) return pa ? -1 : 1;
+  return byNumKey(a, b);
+};
+
 function procExtras(round, asText) {
+  if (round && (round.pack_w != null || round.store_w != null)) return procLossDetail(round, asText);
   return Object.keys(round || {})
     .filter(k => k !== 'value' && PROC_FIELDS[k] && round[k] !== null && round[k] !== undefined && round[k] !== '')
     .map(k => `${PROC_FIELDS[k].label} ${round[k]}${PROC_FIELDS[k].unit}`)
@@ -1277,7 +1311,7 @@ function procLedgerHtml(r) {
 
 function renderProcessModal(r) {
   const checks = r.checks || {};
-  const ids = Object.keys(checks).sort(byNumKey);
+  const ids = Object.keys(checks).sort(procKeySort);
   const lbl = r.round_labels || {};
 
   const rows = ids.map((id, idx) => {
@@ -1326,7 +1360,7 @@ function renderProcessModal(r) {
 
 function printProcess(r) {
   const checks = r.checks || {};
-  const ids = Object.keys(checks).sort(byNumKey);
+  const ids = Object.keys(checks).sort(procKeySort);
   const lbl = r.round_labels || {};
   const rows = ids.map(id => {
     const c = checks[id];
@@ -1975,7 +2009,7 @@ function sheetRows(type, recs) {
       const lbl = r.round_labels || {};
       const items = procLedgerItems(r).map(it => `${it.name} ${it.lot} ${it.qty}개`).join(' / ');
       const raws = procLedgerRawLots(r).join(', ');
-      Object.keys(r.checks || {}).sort(byNumKey).forEach(k => {
+      Object.keys(r.checks || {}).sort(procKeySort).forEach(k => {
         const c = r.checks[k], c1 = c.r1 || {}, c2 = c.r2 || {};
         rows.push([r.meta.date, r.meta.product_label || '', r.meta.product_name || '', items, raws, c.proc || '', c.item || '', c.std || '',
           lbl.r1 || '', xYN(c1.value), procExtras(c1, true), lbl.r2 || '', xYN(c2.value), procExtras(c2, true), c.action || '',

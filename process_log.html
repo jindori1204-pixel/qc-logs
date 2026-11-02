@@ -58,6 +58,8 @@
     .rec-f-row .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
     .rec-f-row .num-input:focus { border-color: #1a3a5c; outline: none; }
     .rec-f-row .f-unit { font-size: 10.5px; color: #888; min-width: 20px; }
+    .loss-out { font-size: 11.5px; font-weight: bold; color: #2e5f8a; text-align: center; padding: 5px 0 2px; }
+    .loss-out.bad { color: #c62828; }
     .rec-date { width: 100%; padding: 7px 3px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; font-family: inherit; background: #fff; margin-bottom: 8px; }
 
     .proc-action { display: none; margin-top: 11px; }
@@ -92,7 +94,7 @@
       body { background: #fff; font-size: 8pt; }
       .container { max-width: 100%; padding: 0; }
       .card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 6px; padding: 8px; }
-      .btn-save, .toast, .btn-photo, .photo-del { display: none !important; }
+      .btn-save, .toast, .btn-photo, .photo-del, .blank-btns, .equip-note { display: none !important; }
       .proc-item { border: 1px solid #999; border-radius: 0; margin-bottom: 4px; padding: 6px; page-break-inside: avoid; break-inside: avoid; }
       .photo-thumb img { height: auto; }
     }
@@ -108,6 +110,8 @@
     .bulk-confirm input { width: 20px; height: 20px; }
     .late-box { display: none; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; color: #6d5600; line-height: 1.6; }
     .late-box.show { display: block; }
+    .equip-note { font-size: 11.5px; color: #8d6e00; background: #fff8e1; border-radius: 6px; padding: 7px 9px; margin-bottom: 12px; line-height: 1.5; }
+    .blank-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     /* 생산일보 불러오기 */
     .btn-ledger { width: 100%; min-height: 46px; padding: 10px; border: 1.5px solid #1a3a5c; border-radius: 8px; background: #fff; color: #1a3a5c; font-size: 13.5px; font-weight: bold; cursor: pointer; font-family: inherit; }
@@ -152,7 +156,7 @@
       </div>
       <div class="field full">
         <label>점검일자</label>
-        <input type="date" id="date" onchange="clearLedger()">
+        <input type="date" id="date" onchange="clearLedger(); renderEquip()">
       </div>
       <div class="field full">
         <button type="button" class="btn-ledger" id="btn-ledger" onclick="loadLedgerDay()">📋 생산일보에서 불러오기 (김현우 부장 쿠팡 수불대장)</button>
@@ -191,6 +195,22 @@
     </div>
     <div class="late-box" id="late-box"></div>
     <div id="proc-list"></div>
+  </div>
+
+  <!-- 설비·도구 결손/마모 점검 (2026.10.30 개정 추가) -->
+  <div class="card" id="equip-card" style="display:none">
+    <div class="section-title">■ 설비·도구 결손/마모 점검 <span class="section-sub">작업 전 · 작업 후 점검 / 적합 O · 부적합 X</span></div>
+    <div class="equip-note">작업 후 점검에서 결손·탈락이 확인되면 해당 작업분 제품은 출고를 보류하고, 금속검출기로 재검사한 뒤 조치사항을 기록합니다.</div>
+    <div id="equip-list"></div>
+  </div>
+
+  <!-- 빈 양식 다운로드 -->
+  <div class="card">
+    <div class="section-title">■ 빈 양식 <span class="section-sub">위에서 선택한 제품군의 현재(개정) 양식</span></div>
+    <div class="blank-btns">
+      <button type="button" class="btn-ledger" onclick="downloadBlank()">📄 빈 양식 다운로드 (Word)</button>
+      <button type="button" class="btn-ledger" onclick="printBlank()">🖨 빈 양식 인쇄 / PDF</button>
+    </div>
   </div>
 
   <!-- 날인확인(현물직인) 사진 -->
@@ -347,6 +367,32 @@ const PRODUCTS = {
       R('출고','온도','배송·유통온도 냉동 -18℃ 이하 / 냉장 0~10℃'),
     ]
   },
+  // 국내산 데친 우렁살 (제조방법설명서 기준) — 탈각 공정이 있어 일반 자숙제품과 분리. 순서: 자숙 → 탈각 → 세척/선별(CCP-1B)
+  snail: {
+    label: '자숙제품 — 우렁살 (175)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (생물우렁이 또는 냉동우렁이살 선별 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (생물우렁이 0~10℃ 냉장보관 / 냉동우렁이살 -18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','냉동우렁이살 입고 시만: 20℃ 이하 해동실에서 10~15분 유수해동 (생물우렁이는 −)'),
+      R('세척','세척방법','브러쉬 세척기로 껍질 세척 (냉동우렁이살 입고 시 −)'),
+      R('자숙','자숙기 투입','온도 97~100℃, 스크류 속도 3, 시간 5~6분 (냉동우렁이살 입고 시 −)',
+        { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'speed', u:'', label:'속도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('탈각','탈각방법','우렁이 껍데기와 속살 분리 / 속살에 껍데기 파편 잔존 여부 확인 (냉동우렁이살 입고 시 −)'),
+      R('세척/선별 (CCP-1B)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('세척/선별 (CCP-1B)','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질(껍데기 파편 포함) 제거'),
+      R('계량 및 내포장','중량확인','우렁이살 무게에 맞춰 담기 (100g 초과 200g 이하: 4.5% 허용오차)', { f: G3 }),
+      R('계량 및 내포장','포장방법','개별 밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','냉장 Fe3.0mm / SUS5.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 스티로폼 상자, 포장재 파손유무 및 세트수량, 아이스팩 투입'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','0~10℃ 냉장보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','냉장 탑차 이용, 배송·유통온도 0~10℃'),
+    ]
+  },
   gejang: {
     label: '절임류 게장 — 포장재검수 포함 (176)', approvers: ['담당','승인'],
     rows: [
@@ -474,6 +520,7 @@ const PRODUCT_TEMP_STD = {
   scallop:  '냉동 -18℃ 이하',
   fish:     '냉동 -18℃ 이하',
   boiled:   '냉동 -18℃ 이하 / 냉장 0~5℃',
+  snail:    '냉장 0~5℃',
   gejang:   '냉동제품 -18℃ 이하 / 냉장제품 0~5℃',
   sunsal:   '냉동 -18℃ 이하',
   crab_cut: '냉동 -18℃ 이하',
@@ -488,7 +535,76 @@ Object.entries(PRODUCTS).forEach(([k, p]) => {
 // 행마다 고유 id 부여 (p1, p2, ...)
 Object.values(PRODUCTS).forEach(p => p.rows.forEach((r, i) => { r.id = 'p' + (i + 1); }));
 
+// ── 보관 후 재계량(감량률 확인) — MF 손질 제품 (2026.11.02 추가, 손질고등어 중량미달 클레임 시정조치) ──
+// id 'wl1'로 고정 (기존 p1, p2 ... 번호는 바꾸지 않음). 감량률은 입력값으로 자동 계산.
+const LOSS_HOURS = 24;
+PRODUCTS.mf_trim.rows.push(R('보관 후 재계량', '감량률 확인',
+  `포장 직후 중량과 냉장(0~5℃) ${LOSS_HOURS}시간 보관 후 중량이 모두 표시중량 이상일 것 · 감량률(%) = (포장 직후 중량 − 보관 후 중량) ÷ 포장 직후 중량 × 100`,
+  { id: 'wl1', calc: 'loss', f: [
+    { k: 'label_w', u: 'g', label: '표시' },
+    { k: 'pack_w', u: 'g', label: '직후' },
+    { k: 'store_w', u: 'g', label: `${LOSS_HOURS}h후` },
+  ] }));
+
+// 제품명에서 표시중량 읽기 (예: "손질 고등어 900g" → 900, "1.2kg" → 1200)
+function labelWeightFromName() {
+  const m = (document.getElementById('product_name').value || '').match(/(\d+(?:\.\d+)?)\s*(kg|g)\b/i);
+  if (!m) return null;
+  return parseFloat(m[1]) * (m[2].toLowerCase() === 'kg' ? 1000 : 1);
+}
+function lossRate(pack, store) {
+  if (pack == null || store == null || pack <= 0) return null;
+  return Math.round((pack - store) / pack * 10000) / 100;   // 소수 둘째 자리
+}
+function calcLoss(id, round) {
+  const lw = document.getElementById(`${id}_${round}_label_w`);
+  if (lw && lw.value === '') { const n = labelWeightFromName(); if (n) lw.value = n; }
+  const label = numVal(`${id}_${round}_label_w`), pack = numVal(`${id}_${round}_pack_w`), store = numVal(`${id}_${round}_store_w`);
+  const rate = lossRate(pack, store);
+  const out = document.getElementById(`${id}_${round}_loss`);
+  const low = label != null && [pack, store].some(v => v != null && v < label);
+  if (out) {
+    out.textContent = `감량률 ${rate == null ? '—' : rate.toFixed(2)}%` + (low ? ' · 표시중량 미달' : '');
+    out.classList.toggle('bad', low);
+  }
+  // 세 값이 모두 있으면 적/부 자동 판정 (표시중량 미달이면 부)
+  if (label != null && pack != null && store != null) {
+    const want = !low, cur = getYN(id, round);
+    if (cur !== want) setYN(id, round, want);
+  }
+}
+
 let currentProduct = 'shrimp';
+
+// ── 설비·도구 결손/마모 점검 (2026.10.30 개정 — 우렁살 금속이물 클레임 재발방지) ──
+// 점검일자가 EQUIP_FROM 이전이면 개정 전 양식(이 항목 없음)으로 작성됨.
+// 행 id는 eq1, eq2 ... 로 고정 (공정 행 p1, p2 ... 와 겹치지 않음). 저장 위치: equip_checks (r1 작업 전 / r2 작업 후)
+const EQUIP_FROM = '2026-10-30';
+const EQUIP = {
+  boiled: [
+    { id:'eq1', proc:'자숙기', item:'스크류', std:'스크류 날개 결손·변형·마모 없을 것 / 스크류 축·고정 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq2', proc:'자숙기', item:'이송망·체인', std:'이송망(메쉬) 찢어짐·철사 끊어짐 없을 것 / 체인 연결핀·고정 클립 탈락 없을 것', yn:true },
+    { id:'eq3', proc:'브러쉬 세척기', item:'브러쉬모', std:'브러쉬모 빠짐·끊어짐·과도한 마모 없을 것 (와이어모 결손 여부 확인)', yn:true },
+    { id:'eq4', proc:'브러쉬 세척기', item:'고정부·커버', std:'브러쉬 고정 볼트·너트, 커버 나사 풀림·탈락 없을 것', yn:true },
+    { id:'eq6', proc:'작업도구', item:'수량·결손', std:'칼·가위·집게·스쿱·바스켓 등 반입·반출 수량 일치 / 날 이빠짐·파손·결손 없을 것',
+      yn:true, f:[{ k:'cnt', u:'개', label:'수량' }] },
+  ],
+  // 우렁살 — 공정 순서대로 (브러쉬 세척 → 자숙 → 탈각). 탈각 설비는 우렁살에만 해당
+  snail: [
+    { id:'eq1', proc:'브러쉬 세척기', item:'브러쉬모', std:'브러쉬모 빠짐·끊어짐·과도한 마모 없을 것 (와이어모 결손 여부 확인)', yn:true },
+    { id:'eq2', proc:'브러쉬 세척기', item:'고정부·커버', std:'브러쉬 고정 볼트·너트, 커버 나사 풀림·탈락 없을 것', yn:true },
+    { id:'eq3', proc:'자숙기', item:'스크류', std:'스크류 날개 결손·변형·마모 없을 것 / 스크류 축·고정 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq4', proc:'자숙기', item:'이송망·체인', std:'이송망(메쉬) 찢어짐·철사 끊어짐 없을 것 / 체인 연결핀·고정 클립 탈락 없을 것', yn:true },
+    { id:'eq5', proc:'탈각 설비', item:'탈각부', std:'탈각 날·핀·롤러 결손·변형·마모 없을 것 / 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq6', proc:'작업도구', item:'수량·결손', std:'칼·가위·집게·스쿱·바스켓 등 반입·반출 수량 일치 / 날 이빠짐·파손·결손 없을 것',
+      yn:true, f:[{ k:'cnt', u:'개', label:'수량' }] },
+  ],
+};
+function equipRows() { return EQUIP[currentProduct] || []; }
+function equipActive() {
+  const d = document.getElementById('date').value;
+  return equipRows().length > 0 && (!d || d >= EQUIP_FROM);
+}
 
 // ── 생산일보(쿠팡 수불대장)에서 불러오기 ───────────────────
 // 품목·LOT·생산수량·원료 LOT만 채움. 적/부·측정값은 점검자가 실제 점검 후 입력.
@@ -502,6 +618,7 @@ const LEDGER_CODE_GROUP = { 'P-206': 'skip', 'P-548': 'skip', 'P-608': null };
 function ledgerGroup(o) {
   const n = o.pname || '';
   if (o.code in LEDGER_CODE_GROUP) return LEDGER_CODE_GROUP[o.code];
+  if (/우렁/.test(n)) return 'snail';   // 탈각 공정이 있는 우렁살은 채널과 관계없이 우렁살 양식
   if (o.ch === 'MF') return /손질/.test(n) ? 'mf_trim' : 'mf_live';
   if (/순살.*게장/.test(n)) return 'sunsal';
   if (/게장/.test(n)) return 'gejang';
@@ -549,9 +666,11 @@ function bulkOK() {
   if (isPastDate() && !document.getElementById('bulk-confirm').checked) return;
   const has2 = document.getElementById('round2_label').value.trim() !== '';
   PRODUCTS[currentProduct].rows.forEach(row => {
-    if (!row.yn) return;
+    if (!row.yn || row.calc) return;   // 재계량은 측정값으로만 판정
     ['r1'].concat(has2 ? ['r2'] : []).forEach(round => { if (getYN(row.id, round) === null) setYN(row.id, round, true); });
   });
+  // 설비·도구 점검은 '작업 전'만 채움 — '작업 후'는 작업이 끝난 뒤 실제 점검하고 직접 입력
+  if (equipActive()) equipRows().forEach(row => { if (getYN(row.id, 'r1') === null) setYN(row.id, 'r1', true); });
   showToast('빈 항목을 적합으로 표시했습니다. 이상 항목과 측정값을 확인하세요.', 'success');
 }
 
@@ -757,8 +876,119 @@ function onProductChange() {
 function renderApproveLine() {
   const p = PRODUCTS[currentProduct];
   document.getElementById('approve-line').innerHTML =
-    `결재란 구성: <b>${p.approvers.join(' · ')}</b> (실물 양식 기준)`;
+    `결재란 구성: <b>${p.approvers.join(' · ')}</b> (실물 양식 기준)` +
+    (equipRows().length ? `<br>양식 개정: <b>${EQUIP_FROM.replace(/-/g, '.')}</b> 설비·도구 결손/마모 점검 추가 — ${equipActive() ? '개정 양식으로 작성' : '점검일자가 개정 전이라 개정 전 양식으로 작성'}` : '');
 }
+
+// ── 설비·도구 점검 렌더링 (작업 전 r1 / 작업 후 r2) ─────────
+function renderEquip() {
+  const card = document.getElementById('equip-card');
+  const list = document.getElementById('equip-list');
+  if (!equipActive()) { card.style.display = 'none'; list.innerHTML = ''; renderApproveLine(); return; }
+  card.style.display = '';
+  list.innerHTML = equipRows().map(row => `
+    <div class="proc-item" id="row-${row.id}">
+      <div class="proc-head">
+        <span class="proc-name">${row.proc}</span>
+        <span class="proc-cat">${row.item}</span>
+      </div>
+      <div class="proc-std">${row.std}</div>
+      <div class="proc-rounds">
+        <div class="round-col"><div class="round-title">작업 전</div>${recordCell(row, 'r1')}</div>
+        <div class="round-col"><div class="round-title">작업 후</div>${recordCell(row, 'r2')}</div>
+      </div>
+      <div class="proc-action" id="action-row-${row.id}">
+        <label>⚠ 부적합 조치사항</label>
+        <textarea id="action-${row.id}" placeholder="예) 결손 부품 교체, 해당 작업분 출고보류 및 금속검출 재검사"></textarea>
+      </div>
+    </div>`).join('');
+  renderApproveLine();
+}
+
+// ── 빈 양식 (Word 다운로드 / 인쇄) ──────────────────────────
+function blankCell(row) {
+  const parts = [];
+  if (row.date) parts.push('&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;');
+  (row.f || []).forEach(f => parts.push(`${f.label ? f.label + ' ' : ''}______${f.u || ''}`));
+  if (row.calc === 'loss') parts.push('감량률 ______%');
+  if (row.yn) parts.push('적 · 부');
+  return parts.join('<br>') || '—';
+}
+function blankFormHtml() {
+  const p = PRODUCTS[currentProduct];
+  const eq = equipRows();
+  const esc = lgEsc;
+  const rowsHtml = (rows, showProcSpan) => rows.map((r, i) => {
+    const sameAsPrev = i > 0 && rows[i - 1].proc === r.proc;
+    let span = 1; while (i + span < rows.length && rows[i + span].proc === r.proc) span++;
+    return `<tr>${sameAsPrev ? '' : `<td class="c b" rowspan="${span}">${esc(r.proc)}</td>`}
+      <td class="c">${esc(r.item)}</td><td>${esc(r.std)}</td>
+      <td class="c rec">${blankCell(r)}</td><td class="c rec">${blankCell(r)}</td><td></td></tr>`;
+  }).join('');
+  const appr = `<table class="appr"><tr>${p.approvers.map(a => `<th>${a}</th>`).join('')}</tr><tr>${p.approvers.map(() => '<td></td>').join('')}</tr></table>`;
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>공정관리 점검일지 - ${esc(p.label)}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  body { font-family: 'Malgun Gothic','맑은 고딕',sans-serif; font-size: 9pt; color: #000; }
+  h1 { text-align: center; font-size: 16pt; margin: 0 0 2px; letter-spacing: 2px; }
+  .sub { text-align: center; font-size: 9pt; margin: 0 0 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #000; padding: 4px 5px; vertical-align: middle; }
+  th { background: #e7ecf3; font-weight: bold; text-align: center; }
+  .c { text-align: center; } .b { font-weight: bold; }
+  .rec { width: 14%; } .hdr td { height: 22px; }
+  .appr { width: auto; margin-left: auto; margin-bottom: 8px; } .appr th { width: 60px; } .appr td { height: 42px; }
+  h2 { font-size: 10.5pt; margin: 12px 0 4px; }
+  .note { font-size: 8pt; margin: 3px 0 0; }
+  tr { page-break-inside: avoid; }
+</style></head><body>
+<h1>공정관리 점검일지</h1>
+<p class="sub">㈜위드프레쉬 · ${esc(p.label)}${eq.length ? ` · 개정 ${EQUIP_FROM.replace(/-/g, '.')}` : ''}</p>
+${appr}
+<table class="hdr">
+  <tr><th style="width:15%">제품명</th><td style="width:35%"></td><th style="width:15%">점검일자</th><td>20&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;&nbsp;.</td></tr>
+  <tr><th>점검자</th><td></td><th>확인자</th><td></td></tr>
+</table>
+<h2>■ 공정별 점검결과 <span style="font-weight:normal;font-size:8.5pt">(적합 O · 부적합 X · 해당없음 −)</span></h2>
+<table>
+  <tr><th style="width:12%">공정</th><th style="width:12%">관리항목</th><th>관리기준</th><th>① (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</th><th>② (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</th><th style="width:13%">부적합 조치</th></tr>
+  ${rowsHtml(p.rows)}
+</table>
+${eq.length ? `<h2>■ 설비·도구 결손/마모 점검 <span style="font-weight:normal;font-size:8.5pt">(작업 전·후 / 적합 O · 부적합 X)</span></h2>
+<table>
+  <tr><th style="width:12%">설비</th><th style="width:12%">점검부위</th><th>점검기준</th><th>작업 전</th><th>작업 후</th><th style="width:13%">부적합 조치</th></tr>
+  ${rowsHtml(eq)}
+</table>
+<p class="note">※ 작업 후 점검에서 결손·탈락이 확인되면 해당 작업분 제품은 출고를 보류하고, 금속검출기로 재검사한 뒤 조치사항을 기록한다.</p>` : ''}
+<h2>■ 비고</h2><table><tr><td style="height:50px"></td></tr></table>
+<h2>■ 확인 (특이사항·개선조치)</h2><table><tr><td style="height:50px"></td></tr></table>
+</body></html>`;
+}
+function blankFileName(ext) {
+  const label = PRODUCTS[currentProduct].label.replace(/[\\/:*?"<>|()]/g, '').replace(/\s+/g, '_');
+  return `공정관리점검일지_${label}_빈양식.${ext}`;
+}
+function downloadBlank() {
+  // Word는 CSS 테두리를 무시하는 경우가 있어 border 속성도 함께 넣음
+  const html = blankFormHtml().replace(/<table/g, '<table border="1" cellspacing="0" cellpadding="4"');
+  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = blankFileName('doc');
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function printBlank() {
+  let f = document.getElementById('blank-print-frame');
+  if (f) f.remove();
+  f = document.createElement('iframe');
+  f.id = 'blank-print-frame';
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(f);
+  f.contentDocument.open(); f.contentDocument.write(blankFormHtml()); f.contentDocument.close();
+  setTimeout(() => { f.contentWindow.focus(); f.contentWindow.print(); }, 300);
+}
+
 
 // ── 기록칸 렌더링 ─────────────────────────────────────────
 function recordCell(row, round) {
@@ -770,9 +1000,10 @@ function recordCell(row, round) {
     html += '<div class="rec-fields">' + row.f.map(f => `
       <div class="rec-f-row">
         ${f.label ? `<span class="f-label">${f.label}</span>` : ''}
-        <input class="num-input" type="number" step="0.1" inputmode="decimal" id="${row.id}_${round}_${f.k}" placeholder="—">
+        <input class="num-input" type="number" step="0.1" inputmode="decimal" id="${row.id}_${round}_${f.k}" placeholder="—"${row.calc === 'loss' ? ` oninput="calcLoss('${row.id}','${round}')"` : ''}>
         ${f.u ? `<span class="f-unit">${f.u}</span>` : ''}
       </div>`).join('') + '</div>';
+    if (row.calc === 'loss') html += `<div class="loss-out" id="${row.id}_${round}_loss">감량률 —%</div>`;
   }
   if (row.yn) {
     html += `<div class="yn-btns">
@@ -811,6 +1042,7 @@ function renderTable() {
 
   renderApproveLine();
   syncRoundTitles();
+  renderEquip();
 }
 
 // 회차 라벨(오전/오후 등)을 각 항목 제목에 반영
@@ -897,12 +1129,29 @@ async function saveRecord() {
         r.date = el && el.value ? el.value : null;
       }
       if (row.f) row.f.forEach(f => { r[f.k] = numVal(`${row.id}_${round}_${f.k}`); });
+      if (row.calc === 'loss') { r.loss_rate = lossRate(r.pack_w, r.store_w); r.hours = LOSS_HOURS; }
       if (r.value === false) hasAlert = true;
       entry[round] = r;
     });
     const actionEl = document.getElementById(`action-${row.id}`);
     entry.action = actionEl ? actionEl.value.trim() : '';
     checks[row.id] = entry;
+  });
+
+  // 설비·도구 결손/마모 점검 (개정 양식일 때만) — r1: 작업 전, r2: 작업 후
+  const equipOn = equipActive();
+  const equip_checks = {};
+  if (equipOn) equipRows().forEach(row => {
+    const entry = { proc: row.proc, item: row.item, std: row.std };
+    ['r1', 'r2'].forEach(round => {
+      const r = { value: getYN(row.id, round) };
+      if (row.f) row.f.forEach(f => { r[f.k] = numVal(`${row.id}_${round}_${f.k}`); });
+      if (r.value === false) hasAlert = true;
+      entry[round] = r;
+    });
+    const actionEl = document.getElementById(`action-${row.id}`);
+    entry.action = actionEl ? actionEl.value.trim() : '';
+    equip_checks[row.id] = entry;
   });
 
   const payload = {
@@ -912,6 +1161,7 @@ async function saveRecord() {
       product_label: p.label,
       product_name: productName,
       approvers: p.approvers,
+      form_rev: equipOn ? EQUIP_FROM : null,   // null = 개정 전 양식
       created_at: Date.now(),
       reviewed: false, reviewed_at: null
     },
@@ -920,6 +1170,7 @@ async function saveRecord() {
       r2: document.getElementById('round2_label').value.trim()
     },
     checks,
+    ...(equipOn ? { equip_checks, equip_labels: { r1: '작업 전', r2: '작업 후' } } : {}),
     photos: { stamp: PHOTOS.stamp || [] },
     note: document.getElementById('note').value.trim(),
     confirm_note: document.getElementById('confirm_note').value.trim(),
