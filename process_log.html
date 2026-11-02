@@ -553,16 +553,12 @@ const LOSS_HOURS = 24;
     { id: 'sc1', f: [{ k: 'scale', u: 'g', label: '분동' }] }));
 })();
 
-// ── 탈수 · 저울 작동 점검 — MF 활·생물 (2026.11.02 추가, 손질 제품과 같은 기준·같은 id 'dw1' / 'sc1') ──
+// ── 저울 작동 점검 — MF 활·생물 (2026.11.02 추가, 손질 제품과 같은 기준·같은 id 'sc1') — 탈수는 넣지 않음 ──
 (function () {
   const rows = PRODUCTS.mf_live.rows;
   const at = rows.findIndex(r => r.proc === '계량 및 내포장' && r.item === '중량확인');
   const sc = PRODUCTS.mf_trim.rows.find(r => r.id === 'sc1');
   rows.splice(at + 1, 0, Object.assign({}, sc));
-  // 탈수 — 2차 세척과 계량 및 내포장 사이 (손질 제품과 같은 기준, id 'dw1')
-  const w = rows.map(r => r.proc).lastIndexOf('2차 세척');
-  const dw = PRODUCTS.mf_trim.rows.find(r => r.id === 'dw1');
-  rows.splice(w + 1, 0, Object.assign({}, dw));
 })();
 
 PRODUCTS.mf_trim.rows.push(R('보관 후 재계량', '감량률 확인 (월 1회)',

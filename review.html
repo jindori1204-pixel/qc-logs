@@ -1271,7 +1271,7 @@ const procItemLabel = (id, c) => id === 'wl1' && !/월 ?1회/.test(c.item || '')
 //   제품군마다 '중량확인' 행 번호가 달라 제품군별로 지정 (손질: p8, 활·생물: p7)
 const PROC_EXTRA_RANK = {
   mf_trim: { dw1: 7.5, sc1: 8.5, wl1: 9999 },
-  mf_live: { dw1: 6.5, sc1: 7.5 },
+  mf_live: { sc1: 7.5 },
 };
 const procRank = (k, product) => {
   const x = PROC_EXTRA_RANK[product] || {};
