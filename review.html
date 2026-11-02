@@ -1220,6 +1220,7 @@ const PROC_FIELDS = {
   w2:    { label: '중량',  unit: 'g' },
   w3:    { label: '중량',  unit: 'g' },
   temp:  { label: '온도',  unit: '℃' },
+  scale: { label: '분동',  unit: 'g' },
   hour:  { label: '시간',  unit: '시간' },
   salt:  { label: '염도',  unit: '%' },
   speed: { label: '속도',  unit: '' },
@@ -1266,11 +1267,10 @@ function procLossDetail(r, asText) {
 // 보관 후 재계량은 월 1회 항목 — 문구 변경 전에 저장된 기록도 '월 1회'로 표시
 const procItemLabel = (id, c) => id === 'wl1' && !/월 ?1회/.test(c.item || '') ? `${c.item || ''} (월 1회)` : (c.item || '');
 // 공정관리 행 정렬: p1, p2 ... 다음에 추가 행(wl1 등)
-const procKeySort = (a, b) => {
-  const pa = /^p\d+$/.test(a), pb = /^p\d+$/.test(b);
-  if (pa !== pb) return pa ? -1 : 1;
-  return byNumKey(a, b);
-};
+// 고정 id로 추가한 행의 표시 위치: dw1 탈수 → p7(세척) 다음, sc1 저울 작동 점검 → p8(계량 및 내포장 중량확인) 다음, wl1 → 맨 끝
+const PROC_EXTRA_RANK = { dw1: 7.5, sc1: 8.5, wl1: 9999 };
+const procRank = k => k in PROC_EXTRA_RANK ? PROC_EXTRA_RANK[k] : /^p\d+$/.test(k) ? parseInt(k.slice(1), 10) : 5000 + (parseInt(String(k).replace(/\D/g, ''), 10) || 0);
+const procKeySort = (a, b) => procRank(a) - procRank(b);
 
 function procExtras(round, asText) {
   if (round && (round.pack_w != null || round.store_w != null)) return procLossDetail(round, asText);
