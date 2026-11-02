@@ -1252,12 +1252,19 @@ function procLossDetail(r, asText) {
   ];
   if (label != null && pack != null && store != null) lines.push(low ? '표시중량 미달' : '표시중량 이상 유지');
   if (asText) return lines.join(' / ');
-  return lines.map((t, i) => {
-    if (i === 4) return `<b style="color:#1a3a5c;">${t}</b>`;
-    if (i === 5) return `<b style="color:${low ? '#c62828' : '#2e7d32'};">${t}</b>`;
-    return t;
-  }).join('<br>');
+  // 결과칸이 좁아(모바일 84px) 짧은 라벨로 한 줄씩
+  const big = 'font-size:11.5px;font-weight:bold;color:#1a3a5c;';
+  return `<div style="line-height:1.5;">
+      <div style="color:#888;font-size:10.5px;">표시 ${f(label)}</div>
+      <div style="${big}">직후 ${f(pack)}</div>
+      <div style="${big}">${h}h후 ${f(store)}</div>
+      <div style="${big}">감량률 ${rate == null ? '—' : Number(rate).toFixed(2) + '%'}</div>
+      <div style="color:#888;font-size:10.5px;">감량 ${loss == null ? '—' : loss + 'g'}</div>
+      ${lines[5] ? `<div style="font-weight:bold;font-size:10.5px;color:${low ? '#c62828' : '#2e7d32'};">${low ? '표시중량 미달' : '표시중량 이상'}</div>` : ''}
+    </div>`;
 }
+// 보관 후 재계량은 월 1회 항목 — 문구 변경 전에 저장된 기록도 '월 1회'로 표시
+const procItemLabel = (id, c) => id === 'wl1' && !/월 ?1회/.test(c.item || '') ? `${c.item || ''} (월 1회)` : (c.item || '');
 // 공정관리 행 정렬: p1, p2 ... 다음에 추가 행(wl1 등)
 const procKeySort = (a, b) => {
   const pa = /^p\d+$/.test(a), pb = /^p\d+$/.test(b);
@@ -1267,6 +1274,7 @@ const procKeySort = (a, b) => {
 
 function procExtras(round, asText) {
   if (round && (round.pack_w != null || round.store_w != null)) return procLossDetail(round, asText);
+  if (round && 'hours' in round && ('label_w' in round || Object.keys(round).every(k => k === 'hours' || k === 'value'))) return '';
   return Object.keys(round || {})
     .filter(k => k !== 'value' && PROC_FIELDS[k] && round[k] !== null && round[k] !== undefined && round[k] !== '')
     .map(k => `${PROC_FIELDS[k].label} ${round[k]}${PROC_FIELDS[k].unit}`)
@@ -1324,7 +1332,7 @@ function renderProcessModal(r) {
       for (let j = idx + 1; j < ids.length && checks[ids[j]].proc === c.proc; j++) span++;
       cells += `<td rowspan="${span}" style="background:#f7f9fc;font-weight:bold;color:#1a3a5c;font-size:11px;text-align:center;white-space:nowrap;">${c.proc}</td>`;
     }
-    cells += `<td style="font-size:11px;text-align:center;background:#fafcfe;">${c.item || ''}</td>`;
+    cells += `<td style="font-size:11px;text-align:center;background:#fafcfe;">${procItemLabel(id, c)}</td>`;
     cells += `<td style="font-size:11.5px;">${c.std || ''}${c.action ? `<div style="color:#c62828;font-size:10.5px;margin-top:3px;">조치: ${c.action}</div>` : ''}</td>`;
     cells += `<td class="rescol r1">${procCell(c, 'r1', skip)}</td>`;
     cells += `<td class="rescol r2">${procCell(c, 'r2', skip)}</td>`;
@@ -1372,7 +1380,7 @@ function printProcess(r) {
               : x.value === true ? '적' : x.value === false ? '부' : '—';
       return `${ex ? ex + '<br>' : ''}${v}`;
     };
-    return `<tr><td>${c.proc || ''}</td><td>${c.item || ''}</td><td>${c.std || ''}</td>
+    return `<tr><td>${c.proc || ''}</td><td>${procItemLabel(id, c)}</td><td>${c.std || ''}</td>
       <td style="text-align:center;">${cell('r1')}</td><td style="text-align:center;">${cell('r2')}</td>
       <td>${c.action || ''}</td></tr>`;
   }).join('');
@@ -2011,7 +2019,7 @@ function sheetRows(type, recs) {
       const raws = procLedgerRawLots(r).join(', ');
       Object.keys(r.checks || {}).sort(procKeySort).forEach(k => {
         const c = r.checks[k], c1 = c.r1 || {}, c2 = c.r2 || {};
-        rows.push([r.meta.date, r.meta.product_label || '', r.meta.product_name || '', items, raws, c.proc || '', c.item || '', c.std || '',
+        rows.push([r.meta.date, r.meta.product_label || '', r.meta.product_name || '', items, raws, c.proc || '', procItemLabel(k, c), c.std || '',
           lbl.r1 || '', xYN(c1.value), procExtras(c1, true), lbl.r2 || '', xYN(c2.value), procExtras(c2, true), c.action || '',
           r.meta.inspector || '', r.meta.confirmer || '', approval(r), xDate(r.meta.reviewed_at), xDate(r.meta.created_at),
           photoCount(r), r.note || '', r.confirm_note || '']);
