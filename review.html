@@ -1268,9 +1268,16 @@ function procLossDetail(r, asText) {
 const procItemLabel = (id, c) => id === 'wl1' && !/월 ?1회/.test(c.item || '') ? `${c.item || ''} (월 1회)` : (c.item || '');
 // 공정관리 행 정렬: p1, p2 ... 다음에 추가 행(wl1 등)
 // 고정 id로 추가한 행의 표시 위치: dw1 탈수 → p7(세척) 다음, sc1 저울 작동 점검 → p8(계량 및 내포장 중량확인) 다음, wl1 → 맨 끝
-const PROC_EXTRA_RANK = { dw1: 7.5, sc1: 8.5, wl1: 9999 };
-const procRank = k => k in PROC_EXTRA_RANK ? PROC_EXTRA_RANK[k] : /^p\d+$/.test(k) ? parseInt(k.slice(1), 10) : 5000 + (parseInt(String(k).replace(/\D/g, ''), 10) || 0);
-const procKeySort = (a, b) => procRank(a) - procRank(b);
+//   제품군마다 '중량확인' 행 번호가 달라 제품군별로 지정 (손질: p8, 활·생물: p7)
+const PROC_EXTRA_RANK = {
+  mf_trim: { dw1: 7.5, sc1: 8.5, wl1: 9999 },
+  mf_live: { sc1: 7.5 },
+};
+const procRank = (k, product) => {
+  const x = PROC_EXTRA_RANK[product] || {};
+  return k in x ? x[k] : /^p\d+$/.test(k) ? parseInt(k.slice(1), 10) : 5000 + (parseInt(String(k).replace(/\D/g, ''), 10) || 0);
+};
+const procSorter = product => (a, b) => procRank(a, product) - procRank(b, product);
 
 function procExtras(round, asText) {
   if (round && (round.pack_w != null || round.store_w != null)) return procLossDetail(round, asText);
@@ -1319,7 +1326,7 @@ function procLedgerHtml(r) {
 
 function renderProcessModal(r) {
   const checks = r.checks || {};
-  const ids = Object.keys(checks).sort(procKeySort);
+  const ids = Object.keys(checks).sort(procSorter(r.meta.product));
   const lbl = r.round_labels || {};
 
   const rows = ids.map((id, idx) => {
@@ -1368,7 +1375,7 @@ function renderProcessModal(r) {
 
 function printProcess(r) {
   const checks = r.checks || {};
-  const ids = Object.keys(checks).sort(procKeySort);
+  const ids = Object.keys(checks).sort(procSorter(r.meta.product));
   const lbl = r.round_labels || {};
   const rows = ids.map(id => {
     const c = checks[id];
@@ -2017,7 +2024,7 @@ function sheetRows(type, recs) {
       const lbl = r.round_labels || {};
       const items = procLedgerItems(r).map(it => `${it.name} ${it.lot} ${it.qty}개`).join(' / ');
       const raws = procLedgerRawLots(r).join(', ');
-      Object.keys(r.checks || {}).sort(procKeySort).forEach(k => {
+      Object.keys(r.checks || {}).sort(procSorter(r.meta.product)).forEach(k => {
         const c = r.checks[k], c1 = c.r1 || {}, c2 = c.r2 || {};
         rows.push([r.meta.date, r.meta.product_label || '', r.meta.product_name || '', items, raws, c.proc || '', procItemLabel(k, c), c.std || '',
           lbl.r1 || '', xYN(c1.value), procExtras(c1, true), lbl.r2 || '', xYN(c2.value), procExtras(c2, true), c.action || '',
