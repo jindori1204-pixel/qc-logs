@@ -561,6 +561,18 @@ const LOSS_HOURS = 24;
   rows.splice(at + 1, 0, Object.assign({}, sc));
 })();
 
+// ── 그물실·낚싯줄 제거 — 절임류 게장·순살게장 (2026.11.16 추가, 곰곰 양념게장 낚싯줄 이물 클레임 VOC #630796885 재발방지) ──
+// 소독 및 헹굼 바로 다음에 넣음. id 'nt1' 고정 (기존 p 번호는 그대로). 발견 건수는 0건도 기록.
+(function () {
+  ['gejang', 'sunsal'].forEach(k => {
+    const rows = PRODUCTS[k].rows;
+    const at = rows.map(r => r.proc).lastIndexOf('소독 및 헹굼');
+    rows.splice(at + 1, 0, R('그물실·낚싯줄 제거', '이물 선별 (발견 건수)',
+      '양념 혼합 전 백색 선별대(조도 540lx 이상)에서 꽃게 다리 8개·집게 2개 관절을 확인해 감긴 그물실·낚싯줄을 가위로 완전히 제거 / 발견 건수 기록 (없으면 0건) · 제거 후 잔존 없으면 적, 잔존 시 부 (재선별 후 조치사항 기록)',
+      { id: 'nt1', f: [{ k: 'cnt', u: '건', label: '발견', step: 1 }] }));
+  });
+})();
+
 PRODUCTS.mf_trim.rows.push(R('보관 후 재계량', '감량률 확인 (월 1회)',
   `[월 1회] 샘플을 냉장(0~5℃) ${LOSS_HOURS}시간 보관 후 재계량 — 포장 직후 중량과 보관 후 중량이 모두 표시중량 이상일 것 · 감량률(%) = (포장 직후 중량 − 보관 후 중량) ÷ 포장 직후 중량 × 100 (측정하지 않은 날은 비워 둠)`,
   { id: 'wl1', calc: 'loss', f: [
@@ -1023,7 +1035,7 @@ function recordCell(row, round) {
     html += '<div class="rec-fields">' + row.f.map(f => `
       <div class="rec-f-row">
         ${f.label ? `<span class="f-label">${f.label}</span>` : ''}
-        <input class="num-input" type="number" step="0.1" inputmode="decimal" id="${row.id}_${round}_${f.k}" placeholder="—"${row.calc === 'loss' ? ` oninput="calcLoss('${row.id}','${round}')"` : ''}>
+        <input class="num-input" type="number" step="${f.step || 0.1}" inputmode="${f.step === 1 ? 'numeric' : 'decimal'}" id="${row.id}_${round}_${f.k}" placeholder="—"${row.calc === 'loss' ? ` oninput="calcLoss('${row.id}','${round}')"` : ''}>
         ${f.u ? `<span class="f-unit">${f.u}</span>` : ''}
       </div>`).join('') + '</div>';
     if (row.calc === 'loss') html += `<div class="loss-out" id="${row.id}_${round}_loss">감량률 —%</div>`;

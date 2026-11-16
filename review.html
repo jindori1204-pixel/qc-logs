@@ -1221,6 +1221,7 @@ const PROC_FIELDS = {
   w3:    { label: '중량',  unit: 'g' },
   temp:  { label: '온도',  unit: '℃' },
   scale: { label: '분동',  unit: 'g' },
+  cnt:   { label: '발견',  unit: '건' },
   hour:  { label: '시간',  unit: '시간' },
   salt:  { label: '염도',  unit: '%' },
   speed: { label: '속도',  unit: '' },
@@ -1272,6 +1273,8 @@ const procItemLabel = (id, c) => id === 'wl1' && !/월 ?1회/.test(c.item || '')
 const PROC_EXTRA_RANK = {
   mf_trim: { dw1: 7.5, sc1: 8.5, wl1: 9999 },
   mf_live: { sc1: 7.5 },
+  gejang:  { nt1: 7.5 },   // 그물실·낚싯줄 제거 → p7(소독 및 헹굼) 다음 (2026.11.16)
+  sunsal:  { nt1: 7.5 },
 };
 const procRank = (k, product) => {
   const x = PROC_EXTRA_RANK[product] || {};
