@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>공정관리 점검일지 (일보 기준 일괄작성) — ㈜위드프레쉬</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 14px; background: #f0f2f5; color: #222; }
+  .container { max-width: 780px; margin: 0 auto; padding: 0 14px 70px; }
+  .page-header { text-align: center; padding: 18px 0 12px; }
+  .page-header h1 { font-size: 19px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; }
+  .page-header p { font-size: 12px; color: #888; margin-top: 3px; }
+
+  .card { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.08); }
+  .range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 9px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+  .field input:focus, .field select:focus { border-color: #1a3a5c; outline: none; }
+  .field.full { grid-column: 1/-1; }
+  .btn-load { width: 100%; margin-top: 10px; min-height: 46px; padding: 10px; border: 1.5px solid #1a3a5c; border-radius: 8px; background: #fff; color: #1a3a5c; font-size: 13.5px; font-weight: bold; cursor: pointer; font-family: inherit; }
+  .btn-load:disabled { opacity: .5; }
+  .msg { font-size: 12px; color: #666; margin-top: 9px; line-height: 1.6; }
+  .msg.err { color: #c62828; }
+
+  .notice { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #7a5c1e; line-height: 1.7; margin-bottom: 12px; }
+  .notice b { color: #5d4413; }
+
+  .sticky { position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 8px 14px 10px; margin: 0 -14px; box-shadow: 0 2px 6px rgba(0,0,0,.05); display: none; }
+  .sticky.show { display: block; }
+  .progress-card { background: #fff; border-radius: 10px; padding: 11px 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; gap: 8px; }
+  .progress-top strong { font-size: 14px; color: #1a3a5c; }
+  .progress-top span { font-size: 12px; color: #888; text-align: right; }
+  .bar { height: 7px; background: #e6e9ee; border-radius: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0%; background: #2e7d32; border-radius: 4px; transition: width .3s; }
+  .confirm { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; color: #6d5600; line-height: 1.5; cursor: pointer; background: #fff8e1; border-radius: 8px; padding: 9px 10px; }
+  .confirm input { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+  .btn-bulk { width: 100%; margin-top: 9px; padding: 11px 0; background: #2e5f8a; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; font-family: inherit; cursor: pointer; letter-spacing: .5px; }
+  .btn-bulk:active { background: #1a3a5c; }
+  .btn-bulk:disabled { background: #b8c2cc; cursor: not-allowed; }
+  .bulk-box { margin-top: 9px; padding: 12px; border-radius: 9px; background: #f4f7fa; border: 1.5px solid #cfdae4; }
+  .bulk-box.done { background: #e8f5e9; border-color: #a5d6a7; }
+  .bulk-box.fail { background: #ffebee; border-color: #ffcdd2; }
+  .bulk-q { font-size: 13px; color: #1a3a5c; font-weight: bold; }
+  .bulk-detail { font-size: 11.5px; color: #667; line-height: 1.65; margin-top: 6px; }
+  .bulk-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .bulk-btns button { flex: 1; padding: 10px 0; border-radius: 7px; font-size: 13px; font-weight: bold; font-family: inherit; cursor: pointer; }
+  .bulk-no { border: 1.5px solid #cfd6dd; background: #fff; color: #778; }
+  .bulk-yes { border: none; background: #1a3a5c; color: #fff; }
+
+  .day-head { font-size: 12px; font-weight: bold; color: #5a6b7c; margin: 16px 2px 7px; letter-spacing: .5px; }
+  .sheet { background: #fff; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 1px 5px rgba(0,0,0,.08); overflow: hidden; }
+  .sheet-head { display: grid; grid-template-columns: 22px 1fr auto; gap: 11px; align-items: center; padding: 12px 14px; cursor: pointer; }
+  .sheet-head:active { background: #f7f9fb; }
+  .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #d5d9de; }
+  .sheet.done .dot, .sheet.exist .dot { background: #2e7d32; border-color: #2e7d32; position: relative; }
+  .sheet.done .dot::after, .sheet.exist .dot::after { content: '✓'; position: absolute; inset: 0; color: #fff; font-size: 11px; line-height: 12px; text-align: center; font-weight: bold; }
+  .sheet.warn .dot { border-color: #e0a800; }
+  .sheet-title { font-size: 13.5px; color: #222; font-weight: bold; line-height: 1.45; }
+  .sheet.done .sheet-title, .sheet.exist .sheet-title { color: #96a2ad; }
+  .sheet-meta { font-size: 11.5px; color: #7d8791; margin-top: 4px; line-height: 1.6; }
+  .pill { display: inline-block; font-size: 10.5px; font-weight: bold; padding: 1px 7px; border-radius: 9px; margin-right: 4px; vertical-align: 1px; }
+  .pill.frz { background: #e3f0fb; color: #1b5e9a; }
+  .pill.chl { background: #fff0e0; color: #b25c00; }
+  .tag { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; white-space: nowrap; }
+  .tag.exist { background: #e8f5e9; color: #2e7d32; }
+  .tag.need { background: #fff3cd; color: #8d6e00; }
+  .tag.late { background: #f1f3f5; color: #6b7783; }
+  .sheet-body { display: none; border-top: 1px solid #eef1f4; padding: 15px; background: #fbfcfd; }
+  .sheet.open .sheet-body { display: block; }
+
+  .section-title { font-size: 13px; font-weight: bold; color: #1a3a5c; border-left: 4px solid #1a3a5c; padding-left: 8px; margin: 4px 0 12px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .approve-line { font-size: 11.5px; color: #888; margin: 8px 0 4px; }
+  .approve-line b { color: #1a3a5c; }
+  .sub-head { font-size: 12px; font-weight: bold; color: #1a3a5c; margin: 16px 0 7px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .btn-all { font-size: 11px; padding: 5px 10px; border: 1.5px solid #2e7d32; color: #2e7d32; background: #fff; border-radius: 6px; font-family: inherit; cursor: pointer; font-weight: bold; }
+
+  .items-tbl { border: 1px solid #e3e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+  .it-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-top: 1px solid #f0f2f5; }
+  .it-row:first-child { border-top: none; }
+  .it-name { font-size: 12.5px; color: #222; line-height: 1.4; }
+  .it-name small { display: block; font-size: 11px; color: #8a949e; }
+  .tbtns { display: flex; gap: 4px; }
+  .tbtn { padding: 6px 10px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 12px; font-weight: bold; background: #fff; color: #999; cursor: pointer; font-family: inherit; }
+  .tbtn.on.frz { background: #e3f0fb; border-color: #1b5e9a; color: #1b5e9a; }
+  .tbtn.on.chl { background: #fff0e0; border-color: #b25c00; color: #b25c00; }
+
+  .proc-item { border: 1.5px solid #e6ebf1; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fff; }
+  .proc-item.has-alert { border-color: #ffcdd2; background: #fff8f8; }
+  .proc-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+  .proc-name { background: #1a3a5c; color: #fff; font-size: 11.5px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+  .proc-cat { background: #eef3f8; color: #2e5f8a; font-size: 11.5px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+  .proc-std { font-size: 12.5px; color: #3a3a3a; line-height: 1.6; margin-bottom: 11px; }
+  .proc-rounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .round-col { min-width: 0; border: 1.5px solid #e6ebf1; border-radius: 8px; padding: 9px 8px; background: #fafcfe; }
+  .round-col.empty { background: #f4f5f7; opacity: .55; }
+  .round-title { font-size: 11px; color: #2e5f8a; font-weight: bold; text-align: center; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .yn-btns { display: flex; gap: 5px; }
+  .yn-btn { flex: 1; padding: 9px 0; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; cursor: pointer; background: #fff; font-family: inherit; color: #999; }
+  .yn-btn.yes.active { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+  .yn-btn.no.active { background: #ffebee; border-color: #c62828; color: #c62828; }
+  .rec-fields { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+  .rec-f-row { display: flex; align-items: center; gap: 4px; }
+  .rec-f-row .f-label { font-size: 10.5px; color: #888; min-width: 26px; }
+  .rec-f-row .num-input { flex: 1; min-width: 0; padding: 7px 3px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; font-family: inherit; background: #fff; -moz-appearance: textfield; }
+  .rec-f-row .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .rec-f-row .f-unit { font-size: 10.5px; color: #888; min-width: 20px; }
+  .rec-date { width: 100%; padding: 7px 3px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; font-family: inherit; background: #fff; margin-bottom: 8px; }
+  .proc-action { display: none; margin-top: 11px; }
+  .proc-action.visible { display: block; }
+  .proc-action label { font-size: 11px; color: #c62828; font-weight: bold; display: block; margin-bottom: 5px; }
+  .proc-action textarea { width: 100%; padding: 8px; border: 1.5px solid #ffcdd2; border-radius: 6px; font-size: 12.5px; font-family: inherit; resize: vertical; min-height: 46px; background: #fff; }
+
+  .photo-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .btn-photo { display: inline-block; padding: 10px 16px; background: #2e5f8a; color: #fff; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .photo-count { font-size: 12px; color: #888; }
+  .photo-note { font-size: 11.5px; color: #8a949e; line-height: 1.5; }
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 10px; }
+  .photo-thumb { position: relative; border: 1.5px solid #ddd; border-radius: 8px; overflow: hidden; background: #fafafa; }
+  .photo-thumb img { width: 100%; height: 92px; object-fit: cover; display: block; }
+  .photo-del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 13px; line-height: 1; cursor: pointer; font-family: inherit; }
+  .photo-empty { font-size: 12px; color: #bbb; padding: 12px 0; text-align: center; border: 1.5px dashed #e2e6ea; border-radius: 8px; margin-top: 10px; }
+  .notes-area textarea { width: 100%; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 58px; }
+  .late-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 9px 11px; margin-bottom: 10px; font-size: 12px; color: #6d5600; line-height: 1.6; }
+  .btn-save { width: 100%; padding: 14px; background: #1a3a5c; color: #fff; border: none; border-radius: 9px; font-size: 15px; font-weight: bold; cursor: pointer; font-family: inherit; letter-spacing: 1px; margin-top: 14px; }
+  .btn-save:disabled { background: #aab; }
+  .saved-note { padding: 10px; background: #e8f5e9; border-radius: 8px; font-size: 12.5px; color: #2e7d32; text-align: center; font-weight: bold; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: 90%; background: #333; color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+  .toast.show { opacity: 1; }
+  .toast.success { background: #2e7d32; }
+  .toast.error { background: #c62828; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <h1>공정관리 점검일지 — 일보 기준 일괄작성 (채널별)</h1>
+    <p>㈜위드프레쉬 · 김현우 부장 쿠팡 수불대장(생산·물류일보) → 날짜·제품군별 일지</p>
+  </div>
+
+  <div class="card">
+    <div class="range-row">
+      <div class="field"><label>시작일</label><input type="date" id="d-from" value="2026-10-22"></div>
+      <div class="field"><label>종료일</label><input type="date" id="d-to" value="2026-11-25"></div>
+    </div>
+    <button type="button" class="btn-load" id="btn-load" onclick="loadLedger()">📋 생산일보 불러오기</button>
+    <div id="load-msg"></div>
+  </div>
+
+  <div class="notice">
+    <b>작성 기준</b> (최신 공정관리 일지 양식 기준)<br>
+    · 날짜 · 제품군 · <b>채널(위드 · 서풍 · 상라 · MF)</b>마다 일지 1장씩 만듭니다. 점검일자 = 생산일이고, 제품군 분류는 부장님 일지 규칙 그대로입니다.<br>
+    · ① <b>오전 = 냉동 제품</b>, ② <b>오후 = 냉장 제품</b>. 점검 시각은 ①②칸 제목 앞에 임의로 넣었고(냉동 오전 · 냉장 오후), <b>MF는 11~14시</b> 생산·출고 시간대로 맞췄습니다. 시각은 펼쳐서 고칠 수 있습니다.<br>
+    · 모든 공정 <b>적(적합)</b>, 점검자 전혜진 계장 · 확인자 김현우 부장. 10/30부터 우렁살·데친 제품은 <b>설비·도구 점검(작업 전/후)</b>이, 11/2부터 MF 손질 <b>탈수·저울 점검</b>이 들어갑니다(월 1회 감량률은 비워 둠).<br>
+    · 온도·중량·시간 등 <b>측정값은 비워둡니다</b> (실측값만 기록). 날인 사진은 펼쳐서 첨부하세요.<br>
+    · 오늘 이전 날짜는 <b>「사후 전산입력」</b>으로 표시되고, 비고에 입력 근거가 자동으로 들어갑니다. 아래 «실제 점검 기록 확인» 체크가 있어야 저장됩니다.
+  </div>
+
+  <div class="sticky" id="sticky">
+    <div class="progress-card">
+      <div class="progress-top"><strong id="prog-text">0 / 0 장 저장</strong><span id="prog-sub"></span></div>
+      <div class="bar"><i id="prog-bar"></i></div>
+      <label class="confirm" id="confirm-wrap" style="display:none">
+        <input type="checkbox" id="confirm-late" onchange="refreshBulk()">
+        <span>오늘 이전 날짜 일지입니다. <b>실제 점검 기록(종이 점검표·메모·사진)을 확인했습니다.</b></span>
+      </label>
+      <button type="button" class="btn-bulk" id="btn-bulk" onclick="askBulk()">⇪ 미저장 전체 한꺼번에 저장</button>
+      <div id="bulk-ask"></div>
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+const FIREBASE_URL = 'https://withfresh-haccp-default-rtdb.asia-southeast1.firebasedatabase.app';
+const LEDGER_URL = 'https://widfresh-erplot-default-rtdb.asia-southeast1.firebasedatabase.app';
+const INSPECTOR = '전혜진 계장';
+const CONFIRMER = '김현우 부장';
+const LEDGER_SOURCE = '생산·물류일보(쿠팡 수불대장)';
+// =============================================
+
+// ── 행 정의 헬퍼 ──────────────────────────────────────────
+function R(proc, item, std, opt) { return Object.assign({ proc, item, std, yn: true }, opt || {}); }
+
+const G3 = [{ k:'w1', u:'g' }, { k:'w2', u:'g' }, { k:'w3', u:'g' }];
+const FRZ = [{ k:'temp', u:'℃' }, { k:'hour', u:'시간' }];
+
+// ── 제품군별 공정 마스터 (실물 양식 172~178과 동일한 순서·문구) ──
+const PRODUCTS = {
+  shrimp: {
+    label: '새우젓 (172)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관 방법 확인 (10℃이하 냉장보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('선별','이물','드럼통에서 새우젓을 꺼내 선별대에 올려 이물을 선별한다. (2차 선별)'),
+      R('세척','염도','염도 25%의 소금물에 새우젓을 세척한다. (이물 제거 및 으스러짐 방지)'),
+      R('내포장','중량확인 포장방법','통에 새우젓을 중량만큼 담은 후 뚜껑을 닫는다. (중량 +10% 이내 오차허용)', { f: G3 }),
+      R('내포장','소비기한','제조일로부터 12개월까지 (냉장)', { date: true, yn: false }),
+      R('금속검출','금속검출기','금속검출기를 통과해 금속성 이물을 걸러낸다. (Fe 2.5mm, SUS 4.0mm 이상 불검출)'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','10℃ 이하'),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 10℃ 이하'),
+    ]
+  },
+  oyster: {
+    label: '생굴·냉동굴·멍게·오만둥이 (172)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관 방법 확인 (0~1℃ 냉장보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 브로아 세척수조에서 세척'),
+      R('2차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척'),
+      R('3차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('3차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척'),
+      R('급속동결','온도, 시간','트레이에 담아 급속동결실에서 보관 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('내포장','중량확인 포장방법','알맹이를 중량에 맞게 담고 진공포장 (생굴·오만둥이·멍게는 용수를 넣어 밀봉포장) (중량 +10% 이내 오차허용)', { f: G3 }),
+      R('내포장','소비기한 (제조일자)','생굴·냉동굴(포장일) / 오만둥이·멍게 (소비기한: 제조일로부터 6일까지)', { date: true }),
+      R('금속검출','금속검출기','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('클립포장','포장방법','클립으로 이중포장'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동제품 -18℃ 이하 냉동보관 / 냉장제품 0~1℃ 냉장보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도: 냉동제품 -18℃ 이하 / 냉장제품 0~1℃'),
+    ]
+  },
+  scallop: {
+    label: '손질가리비 (173)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (0~10℃ 냉장보관)'),
+      R('세척 (CCP-1B)','세척방법 CCP모니터링','공정품을 세척수조에서 이물질 제거 / 세척횟수 2회 / 세척수량 350ℓ 이상 / 세척시간 20초 이상 / 세척수 교체주기 300kg 이내 / 1회 원물량 10kg 이내'),
+      R('선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 제거'),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('계량','중량확인','가리비살 무게에 맞춰 담기 (허용오차 50g 초과 100g 이하: 4.5g)', { f: G3 }),
+      R('내포장','포장방법','밀봉상태 확인'),
+      R('내포장','소비기한','제조일로부터 24개월까지 (냉동)', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','보관온도 -18℃ 이하 냉동보관'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  fish: {
+    label: '어류 — 참돔·가자미·조기 (174)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','20℃ 이하 해동실에서 15분 이내 해동'),
+      R('전처리','손질방법','비늘·내장 제거'),
+      R('세척','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('염지','염도, 시간','일정량의 천일염으로 60분간 염지 (반건조참돔 4% / 손질참조기 4% / 반건조물가자미 3%)', { f: [{ k:'salt', u:'%', label:'염도' }] }),
+      R('세척','세척방법','흐르는 물에 세척'),
+      R('수절','수절방법, 시간','발에 널어 1시간 가량 물빼기'),
+      R('반건조','건조방법, 시간','1시간 가량 강력팬을 돌려 건조'),
+      R('급속동결','온도, 시간','1미씩 대차발에 놓고 급속동결 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('계량','중량확인','원료별 정량 투입 확인 (200g 초과 300g 이하: 9g / 300g 초과 500g 이하: 3% 허용오차)', { f: G3 }),
+      R('내포장','진공포장','진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 12개월까지 (냉동) ※반건조자연산참돔·손질돔·손질참조기: 소비기한 24개월', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  boiled: {
+    label: '자숙제품 (175)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','해동방법','해동조에서 흐르는 물에 해동'),
+      R('손질 및 절단','손질방법','비가식부위 제거 및 알맞은 크기로 절단'),
+      R('세척/선별 (CCP-1B)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('자숙','자숙기 투입','온도 97~100℃, 스크루 속도 3 / 시간: 10~15분(자숙제품), 5~6분(데친 제품)',
+        { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'speed', u:'', label:'속도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('계량','중량확인','원료별 정량 투입 확인 (200g 초과 300g 이하: 9g / 300g 초과 500g 이하: 3% 허용오차)', { f: G3 }),
+      R('내포장','진공포장','진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 (      ) 까지', { date: true, yn: false }),
+      R('급속동결','온도, 시간','대차발에 놓고 급속동결 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동 -18℃ 이하 / 냉장 0~10℃', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 냉동 -18℃ 이하 / 냉장 0~10℃'),
+    ]
+  },
+  // 국내산 데친 우렁살 (제조방법설명서 기준) — 탈각 공정이 있어 일반 자숙제품과 분리. 순서: 자숙 → 탈각 → 세척/선별(CCP-1B)
+  snail: {
+    label: '자숙제품 — 우렁살 (175)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (생물우렁이 또는 냉동우렁이살 선별 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (생물우렁이 0~10℃ 냉장보관 / 냉동우렁이살 -18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','냉동우렁이살 입고 시만: 20℃ 이하 해동실에서 10~15분 유수해동 (생물우렁이는 −)'),
+      R('세척','세척방법','브러쉬 세척기로 껍질 세척 (냉동우렁이살 입고 시 −)'),
+      R('자숙','자숙기 투입','온도 97~100℃, 스크류 속도 3, 시간 5~6분 (냉동우렁이살 입고 시 −)',
+        { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'speed', u:'', label:'속도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('탈각','탈각방법','우렁이 껍데기와 속살 분리 / 속살에 껍데기 파편 잔존 여부 확인 (냉동우렁이살 입고 시 −)'),
+      R('세척/선별 (CCP-1B)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('세척/선별 (CCP-1B)','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질(껍데기 파편 포함) 제거'),
+      R('계량 및 내포장','중량확인','우렁이살 무게에 맞춰 담기 (100g 초과 200g 이하: 4.5% 허용오차)', { f: G3 }),
+      R('계량 및 내포장','포장방법','개별 밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','냉장 Fe3.0mm / SUS5.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 스티로폼 상자, 포장재 파손유무 및 세트수량, 아이스팩 투입'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','0~10℃ 냉장보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','냉장 탑차 이용, 배송·유통온도 0~10℃'),
+    ]
+  },
+  gejang: {
+    label: '절임류 게장 — 포장재검수 포함 (176)', approvers: ['담당','승인'],
+    rows: [
+      R('입고 검수','규격','원부재료 규격에 적합 (포장재 포함)'),
+      R('보관','보관 방법','원재료 보관 방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','유수해동: 20℃ 이하 15분 이내 흐르는 물로 해동 / 냉장해동: 10℃ 이하 24시간 이내 해동'),
+      R('절단','손질방법','비가식부위 제거'),
+      R('세척','세척방법','손질된 공정품을 세척수조에서 세척'),
+      R('소독 및 헹굼','CCP모니터링 (CCP-1BC)','차아염소산 농도 100~150ppm에서 5~6분간 소독 / 잔류하지 않도록 흐르는 물에 1회 30~45초 헹굼 / 소독수·헹굼수 교체주기 300kg 이내 (유리잔류염소 4ppm 이하)'),
+      R('계량 및 혼합','중량확인','비율함량에 맞게 혼합', { f: [{ k:'raw', u:'g', label:'원료' }, { k:'sauce', u:'g', label:'소스' }] }),
+      R('포장재 검수','포장재 육안검사','포장재 파손유무 등 부적합품 선별'),
+      R('트레이담기','중량확인','혼합이 끝난 제품을 교차오염이 되지 않도록 담음 (300g 초과 500g 이하: 3% / 1kg 초과 10kg 이하: 1.5% 허용오차)', { f: G3 }),
+      R('내포장','포장방법','밀봉상태 확인'),
+      R('내포장','소비기한 (제조일자)','제조일로부터 12개월까지 (냉동) ※곰곰 양념게장·간장게장(냉장) 소비기한: 제조일로부터 10일', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('완제품 검수','포장상태','포장재 파손유무'),
+      R('완제품 검수','포장상태','밀봉 상태'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉동제품 -18℃ 이하 냉동보관 / 냉장제품 0~10℃ 냉장보관'),
+      R('테이핑','육안검사','아이스팩 투여 후 테이핑'),
+      R('출고','온도','냉동제품 배송·유통온도 -18℃ 이하 / 냉장제품 0~10℃ 이하'),
+    ]
+  },
+  sunsal: {
+    label: '절임류 순살게장 (177)', approvers: ['담당','검토','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','유수해동: 20℃ 이하 15분 이내 흐르는 물로 해동 / 냉장해동: 10℃ 이하 24시간 이내 해동'),
+      R('절단','손질방법','등껍질·아가미 및 모래주머니 제거 후 2절 또는 4절'),
+      R('세척','세척방법','절단된 공정품을 세척수조에서 세척'),
+      R('소독 및 헹굼','CCP모니터링 (CCP-1BC)','차아염소산 농도 100ppm±5ppm에서 5분간 소독 / 잔류하지 않도록 흐르는 물에 2~3번 헹굼 (잔류염소 0.5ppm 이하)'),
+      R('채육','채육방법','채육기에 넣어 게살만 채육'),
+      R('계량 및 혼합','중량확인','게 순살과 소스의 비율을 함량에 맞게 혼합', { f: [{ k:'crab', u:'g', label:'꽃게' }, { k:'sauce', u:'g', label:'소스' }] }),
+      R('트레이담기','중량확인','혼합이 끝난 제품을 교차오염이 되지 않도록 담음 (50g 초과 100g 이하: 4.5g / 300g 초과 500g 이하: 3% / 1kg 초과 10kg 이하: 1.5% 허용오차)', { f: G3 }),
+      R('내포장 (컵실러기)','컵실러 포장','밀봉상태 확인'),
+      R('내포장','소비기한','제조일로부터 12개월까지 (냉동) ※속이꽉찬양념게장·간장게장(냉장) 소비기한: 제조일로부터 20일', { date: true }),
+      R('동결','온도, 시간','동결온도 -30℃ 이하에서 4시간 이상 동결', { f: FRZ }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','Fe2.5mm / STS4.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','보관온도 -18℃ 이하 냉동보관'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  crab_cut: {
+    label: '한치·절단꽃게 (178)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)'),
+      R('개포','이물','이물혼합방지'),
+      R('해동','온도, 시간','20℃ 이하 해동실에서 흐르는 물에 원료의 형태를 그대로 보존하면서 해동'),
+      R('선별','선별방법','외관이 불량하거나 선도 떨어지는 원료 및 이물질 제거'),
+      R('전처리','손질방법','비가식부위를 제거 (절단꽃게·손질꽃게는 2절 또는 4절)'),
+      R('세척','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('계량','중량확인','원료별 정량 투입 확인 (100g 초과 200g 이하: 4.5% / 300g 초과 500g 이하: 3% / 500g 초과 1kg 이하: 15g 허용오차)',
+        { f: [{ k:'w1', u:'g' }, { k:'w2', u:'g' }, { k:'w3', u:'g' },
+              { k:'p1', u:'토막' }, { k:'p2', u:'토막' }, { k:'p3', u:'토막' }] }),
+      R('내포장','포장방법','밀봉 상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true, yn: false }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉동 Fe2.5mm / STS4.0mm 불검출, 냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('급속동결','온도, 시간','계량한 반제품을 트레이에 담아 급속동결실에서 보관 (-30℃ 이하, 4시간 이상)', { f: FRZ }),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하'),
+      R('테이핑','육안검사','드라이아이스 투여 후 테이핑'),
+      R('출고','온도','배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  // MF 산지직송 — 생굴·오만둥이 제조방법설명서 기준 (세척만 하여 냉장 출고)
+  mf_live: {
+    label: 'MF 산지직송 — 활·생물 세척 냉장출고', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (선도·외관 확인, 활 제품은 생존 상태 확인, 냉장 0~10℃ 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (0~10℃ 냉장보관, 활 제품은 동결 금지)', { f: [{ k:'temp', u:'℃' }] }),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료, 폐사 개체 및 이물질 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 세척수조에서 세척 (펄·모래·오물 제거)'),
+      R('2차 선별','선별방법','외관 불량·폐사 개체 및 패각 파편·족사·이물질 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 흐르는 물로 세척'),
+      R('계량 및 내포장','중량확인','표시중량 이상 담음 (계량 확인)', { f: G3 }),
+      R('계량 및 내포장','포장방법','밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량, 아이스팩 투입 (활 제품은 직접 닿지 않게)'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('출고','온도','배송·유통온도 냉장 0~10℃'),
+    ]
+  },
+  // MF 산지직송 — 제품명에 "손질": 비가식부위 손질 후 세척하여 냉장 출고 (백조기 174 기록·손질갑오징어 제조방법설명서 기준)
+  mf_trim: {
+    label: 'MF 산지직송 — 손질 제품 냉장출고', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (선도·외관 확인, 냉장 0~10℃ 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (냉장 0~10℃ / 해동 제품 원료는 -18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('해동','온도, 시간','해동 제품만: 20℃ 이하 흐르는 물에 원료의 형태를 그대로 보존하면서 해동 (해당 없으면 −)'),
+      R('선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질 제거'),
+      R('손질','손질방법','비가식부위 제거 (어류: 비늘·내장·아가미·지느러미 / 오징어·갑오징어: 내장·먹물·갑)'),
+      R('세척 (2회)','CCP모니터링','세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('세척 (2회)','손질 상태 확인','세척 후 잔여 내장·혈합육·비늘·먹물 잔존 여부 육안 확인 (잔존 시 재손질 후 재세척)'),
+      R('계량 및 내포장','중량확인','표시중량 이상 담음 (계량 확인)', { f: G3 }),
+      R('계량 및 내포장','포장방법','밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인 · 해동 제품은 "해동품" 표시', { date: true }),
+      R('금속검출','CCP모니터링','작동상태 확인'),
+      R('금속검출','CCP모니터링','냉장 Fe3.0mm / STS5.0mm 불검출'),
+      R('외포장','육안검사','포장재 파손유무 및 세트수량, 아이스팩 투입'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('출고','온도','배송·유통온도 냉장 0~10℃'),
+    ]
+  },
+  // ═══ 제조방법설명서(구글드라이브) 기준 품목별 양식 — 2026.11 ═══
+  // 손질 서대(반건조) — 「손질서대(반건조공정설명서).docx」「2.제조방법설명서.pdf」
+  seodae: {
+    label: '손질 서대 — 반건조 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (서대·미얀마산 / 천일염·국내산)'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('출고·해동','해동방법','냉동창고에서 출고하여 작업장으로 운반 / 자연해동 및 흐르는 물에 형태를 그대로 보존하면서 해동'),
+      R('손질','손질방법','비늘칼로 비늘 제거, 두절 후 내장 제거'),
+      R('세척 (CCP-1B)','CCP모니터링','흐르는 물에 이물질 제거 / 세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('염지','염도, 시간','3% 염수(g/100g)에 10분간 담가 물간', { f: [{ k:'salt', u:'%', label:'염도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('수절','수절방법, 시간','발에 널어 1시간가량 물빼기'),
+      R('반건조','건조조건 (온도, 시간)','포장 없이 1미씩 대차발에 펼쳐 동결실(냉각기 냉풍이 직접 닿는 위치) -20℃ 이하에서 4시간 건조', { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'hour', u:'시간', label:'시간' }] }),
+      R('반건조','적재상태·제상','1미씩 겹침 없이 적재 / 건조 중 제상 없을 것 (제상 시 제상 시간만큼 건조 시간 연장)'),
+      R('반건조','중량 감량률','건조 전후 대차별 계량 — 감량률 5~10% (감량률(%) = (건조 전 − 건조 후) ÷ 건조 전 × 100) ※ 기준은 시제품 3~5배치 실측으로 확정',
+        { f: [{ k:'dry_before', u:'kg', label:'건조 전' }, { k:'dry_after', u:'kg', label:'건조 후' }] }),
+      R('급속동결','온도, 시간','반건조 직후 1미씩 대차발에 올려 -30℃ 이하 4시간 이상 급속동결', { f: FRZ }),
+      R('계량','중량확인','저울 0점을 맞춘 후 중량에 맞게 계량', { f: G3 }),
+      R('내포장','진공포장','비닐포장지에 넣어 진공포장 / 진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / SUS4.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 스티로폼 상자에 담고 아이스팩 투입, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하 냉동보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','온도','냉동 탑차 이용, 배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  // 국산 오만둥이·손질 멍게 — 「국산 오만둥이 / 국산 손질 멍게 제조방법설명서」 (선별·세척 2회, 냉장 0~10℃, 동결 없음)
+  mdoong: {
+    label: '오만둥이·손질 멍게 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (로트번호 기재 후 창고 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관 또는 0~10℃ 냉장보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','로트번호','로트번호 기재 후 출고'),
+      R('해동','해동방법','냉동 원료만: 자연해동 및 흐르는 물에 원료의 형태를 그대로 보존하면서 해동 (냉장 원료는 −)'),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 브로아 세척수조에서 세척'),
+      R('2차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 세척'),
+      R('계량','중량확인','중량에 맞게 담음', { f: G3 }),
+      R('내포장','포장방법','밀봉포장(실링포장) / 밀봉상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인 (제조일로부터 6일까지 — 일지 양식 기준)', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','교차오염 방지를 위해 밀봉하여 통과 / Fe3.0mm / SUS5.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 지상자·스티로폼 상자 포장, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('출고','온도','배송·유통온도 0~10℃ (로트번호 기재하고 출고)'),
+    ]
+  },
+  // 국산 바지락살(냉동) — 「국산 바지락살 제조방법설명서」
+  clam: {
+    label: '국산 바지락살 — 냉동 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (로트번호 기재 후 창고 입고)'),
+      R('보관','보관방법','원재료 보관방법 확인 (0~10℃)', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','로트번호','로트번호 기재하여 출고'),
+      R('1차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('1차 세척','세척방법','형태를 그대로 보존하며 브로아 세척수조에서 세척'),
+      R('2차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('2차 세척','세척방법','형태를 그대로 보존하며 세척(컨베이어)'),
+      R('3차 선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('3차 세척','세척방법','형태를 그대로 보존하며 세척(유수세척)'),
+      R('급속동결','온도, 시간','대차발에 올려 -30℃ 이하 4시간 이상 동결', { f: FRZ }),
+      R('계량','중량확인','바지락살 알맹이를 중량에 맞게 계량', { f: G3 }),
+      R('내포장','진공포장','비닐을 씌워 진공포장 / 진공상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / SUS4.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 지상자·스티로폼 상자 포장, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하 냉동보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','온도','냉동 탑차 이용, 배송·유통온도 -18℃ 이하 (로트번호 기재 후 출고)'),
+    ]
+  },
+  // 국내산 순살 간장새꼬막장 — 「국내산 순살 간장새꼬막장 제조방법설명서」 (자숙 꼬막살 입고 → 소독 → 배합)
+  kkomak: {
+    label: '간장새꼬막장 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원부재료 규격에 적합 (자숙 꼬막살·소스·포장재, 로트번호 기재 후 입고)'),
+      R('보관','보관방법','자숙된 꼬막살 입고 후 냉장창고 및 실온(계절별) 보관 확인', { f: [{ k:'temp', u:'℃' }] }),
+      R('소독 (CCP-1BC)','CCP모니터링','차아염소산 농도 100ppm±5ppm에서 5분간 소독'),
+      R('헹굼 (CCP-1BC)','CCP모니터링','세척수조 2번 헹굼 (차아염소산 잔류하지 않도록)'),
+      R('계량 / 트레이 담기','중량확인','새꼬막살을 비율에 맞게 트레이에 담기 (새꼬막 42.86%)', { f: G3 }),
+      R('배합','소스 배합','새꼬막살이 담긴 트레이에 간장소스를 비율에 맞게 배합 (소스 57.14%)', { f: [{ k:'raw', u:'g', label:'꼬막' }, { k:'sauce', u:'g', label:'소스' }] }),
+      R('내포장','포장방법','컵실러기로 개별포장 / 밀봉상태 확인'),
+      R('내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('동결','온도, 시간','-30℃ 이하 4시간 이상 급속동결', { f: FRZ }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / SUS4.0mm 이상 불검출'),
+      R('외포장','육안검사','규격에 맞는 지상자·스티로폼 상자 포장, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하 냉동보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('테이핑 및 출고','육안검사 / 온도','아이스팩 투여 및 테이핑 / 배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  // 오징어·갑오징어 냉동 가공 — 「국내산 오징어슬라이스」「손질갑오징어」「렌지로 데쳐 바로먹는 간편 오징어 숙회」 제조방법설명서
+  squid: {
+    label: '오징어·갑오징어·오징어슬라이스 — 냉동 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (국내산 오징어·갑오징어)'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('출고·해동','해동방법','냉동창고에서 출고하여 작업장으로 운반 / 자연해동 및 흐르는 물에 형태를 그대로 보존하면서 해동'),
+      R('선별','선별방법','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거'),
+      R('손질','손질방법','내장 등 비가식부위 제거 (갑오징어: 내장 및 갑 제거)'),
+      R('슬라이스','슬라이스 규격','슬라이스 제품만: 1.5cm 크기로 슬라이스 (손질갑오징어는 −)'),
+      R('세척','세척방법','흐르는 물에 이물질 제거'),
+      R('급속동결','온도, 시간','대차발(대차트레이)에 올려 -30℃ 이하 4시간 이상 급속동결 (※오징어 숙회는 계량·밀봉 후 급속동결)', { f: FRZ }),
+      R('계량 및 내포장','중량확인','저울의 0점을 맞춘 후 중량에 맞게 계량', { f: G3 }),
+      R('계량 및 내포장','포장방법','진공포장(숙회는 밀봉포장) / 포장상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','냉동 Fe2.5mm / SUS4.0mm 이상 불검출 (설명서에 수치 미기재 — 냉동제품 기준 적용)'),
+      R('외포장','육안검사','규격에 맞는 스티로폼 상자에 담고 아이스팩·드라이아이스 투입, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','-18℃ 이하 냉동보관', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','온도','냉동 탑차 이용, 배송·유통온도 -18℃ 이하'),
+    ]
+  },
+  // 국내산 데친 문어 슬라이스(냉장) — 「국내산 데친 문어 슬라이스 제조방법설명서」
+  octopus: {
+    label: '데친 문어 슬라이스 — 냉장 (제조방법설명서)', approvers: ['담당','승인'],
+    rows: [
+      R('입고','규격','원재료 규격에 적합 (국내산 문어)'),
+      R('보관','보관방법','원재료 보관방법 확인 (-18℃ 이하 냉동보관)', { f: [{ k:'temp', u:'℃' }] }),
+      R('개포','이물','이물혼합방지'),
+      R('출고·해동','해동방법','냉동창고에서 출고하여 작업장으로 운반 / 자연해동 및 흐르는 물에 문어의 형태를 그대로 보존하면서 해동'),
+      R('손질 / 세척','손질방법','문어의 내장 등 비가식 부위 제거 후 세척'),
+      R('자숙','자숙기 투입','온도 97~100℃, 스크류 속도 3, 시간 10~15분',
+        { f: [{ k:'temp', u:'℃', label:'온도' }, { k:'speed', u:'', label:'속도' }, { k:'min', u:'분', label:'시간' }] }),
+      R('슬라이스','슬라이스 규격','1.5cm 크기로 슬라이스'),
+      R('세척/선별 (CCP-1B)','CCP모니터링','외관이 불량하거나 선도가 떨어지는 원료 및 이물질을 제거하며 세척 / 세척횟수 2회 / 세척수량 350L~400L / 세척시간 20초~40초 / 세척수 교체시기 300kg 이내'),
+      R('계량 및 내포장','중량확인','중량에 맞춰 계량', { f: G3 }),
+      R('계량 및 내포장','포장방법','비닐을 씌워 밀봉포장 / 밀봉상태 확인'),
+      R('계량 및 내포장','소비기한 (제조일자)','소비기한(제조일자) 날인 확인', { date: true }),
+      R('금속검출 (CCP-2P)','CCP모니터링','작동상태 확인'),
+      R('금속검출 (CCP-2P)','CCP모니터링','Fe2.5mm / SUS4.0mm 이상 불검출 (설명서 기준)'),
+      R('외포장','육안검사','규격에 맞춰 스티로폼 상자에 담고 아이스팩 투입, 포장재 파손유무 및 세트수량'),
+      R('외포장','날인','내포장재와 동일여부 확인'),
+      R('보관','온도','냉장 보관 (0~10℃)', { f: [{ k:'temp', u:'℃' }] }),
+      R('출고','온도','냉장 탑차 이용, 배송·유통온도 0~10℃'),
+    ]
+  },
+};
+
+// ── 출고 제품 품온 확인 (각 제품군 마지막 행으로 추가 — 기존 행 id는 그대로 유지) ──
+const PRODUCT_TEMP_STD = {
+  shrimp:   '냉장 0~5℃',
+  oyster:   '냉동제품 -18℃ 이하 / 냉장제품 0~5℃',
+  scallop:  '냉동 -18℃ 이하',
+  fish:     '냉동 -18℃ 이하',
+  boiled:   '냉동 -18℃ 이하 / 냉장 0~5℃',
+  snail:    '냉장 0~5℃',
+  gejang:   '냉동제품 -18℃ 이하 / 냉장제품 0~5℃',
+  sunsal:   '냉동 -18℃ 이하',
+  crab_cut: '냉동 -18℃ 이하',
+  mf_live:  '냉장 0~5℃ (활 제품은 얼지 않을 것)',
+  mf_trim:  '냉장 0~5℃',
+  seodae:   '냉동 -18℃ 이하',
+  mdoong:   '냉장 0~5℃',
+  clam:     '냉동 -18℃ 이하',
+  kkomak:   '냉동 -18℃ 이하',
+  squid:    '냉동 -18℃ 이하',
+  octopus:  '냉장 0~5℃',
+};
+Object.entries(PRODUCTS).forEach(([k, p]) => {
+  p.rows.push(R('출고', '제품 품온', `출고 전 제품 품온 측정: ${PRODUCT_TEMP_STD[k]}`,
+    { f: [{ k: 'temp', u: '℃', label: '품온' }] }));
+});
+
+// 냉장 제품은 급속동결을 하지 않음 → 동결 공정 행은 냉동(①) 칸에만 적용, 냉장(②) 칸은 비움
+Object.values(PRODUCTS).forEach(p => p.rows.forEach(r => {
+  if (/^(급속)?동결$/.test(r.proc)) r.only = 'frz';
+  if (/−\)|해당 없으면 −/.test(r.std) || /제품만:|냉동 원료만/.test(r.std)) r.cond = true;
+  if (r.proc === '슬라이스') r.cond = false;   // 슬라이스 여부는 applies()가 제품명으로 판단   // 제품·원료에 따라 해당 여부가 갈리는 행 — 적/부 자동 입력 안 함
+}));
+// 행마다 고유 id 부여 (p1, p2, ...)
+Object.values(PRODUCTS).forEach(p => p.rows.forEach((r, i) => { r.id = 'p' + (i + 1); }));
+
+// ── 보관 후 재계량(감량률 확인) — MF 손질 제품 (2026.11.02 추가, 손질고등어 중량미달 클레임 시정조치) ──
+// id 'wl1'로 고정 (기존 p1, p2 ... 번호는 바꾸지 않음). 감량률은 입력값으로 자동 계산.
+const LOSS_HOURS = 24;
+// ── 탈수 · 저울 작동 점검 — MF 손질 제품 (2026.11.02 추가) ──
+// 고정 id: dw1 탈수(세척 다음), sc1 저울 점검(계량 및 내포장 · 중량확인 다음) — 기존 p 번호는 그대로
+(function () {
+  const rows = PRODUCTS.mf_trim.rows;
+  // 탈수 (2026.11.02 추가) — 세척 공정 바로 다음, id 'dw1' 고정
+  const w = rows.map(r => r.proc).lastIndexOf('세척 (2회)');
+  rows.splice(w + 1, 0, R('탈수', '탈수시간',
+    '세척 후 탈수대(채반)에 펼쳐 5분 이상 물빼기 후 계량 (표면수에 의한 중량 오차 방지)',
+    { id: 'dw1', f: [{ k: 'min', u: '분', label: '시간' }] }));
+  const at2 = rows.findIndex(r => r.proc === '계량 및 내포장' && r.item === '중량확인');
+  rows.splice(at2 + 1, 0, R('계량 및 내포장', '저울 작동 점검',
+    '작업 시작 전 및 작업 중 2시간에 1회, 표준분동(1kg)을 올려 저울이 정상 작동하는지 점검 (영점 확인, 오차 ±2g 이내) · 오차 초과 시 사용 중지, 예비 저울로 교체 후 직전 점검 이후 계량분 전량 재계량',
+    { id: 'sc1', f: [{ k: 'scale', u: 'g', label: '분동' }] }));
+})();
+
+// ── 저울 작동 점검 — MF 활·생물 (2026.11.02 추가, 손질 제품과 같은 기준·같은 id 'sc1') — 탈수는 넣지 않음 ──
+(function () {
+  const rows = PRODUCTS.mf_live.rows;
+  const at = rows.findIndex(r => r.proc === '계량 및 내포장' && r.item === '중량확인');
+  const sc = PRODUCTS.mf_trim.rows.find(r => r.id === 'sc1');
+  rows.splice(at + 1, 0, Object.assign({}, sc));
+})();
+
+PRODUCTS.mf_trim.rows.push(R('보관 후 재계량', '감량률 확인 (월 1회)',
+  `[월 1회] 샘플을 냉장(0~5℃) ${LOSS_HOURS}시간 보관 후 재계량 — 포장 직후 중량과 보관 후 중량이 모두 표시중량 이상일 것 · 감량률(%) = (포장 직후 중량 − 보관 후 중량) ÷ 포장 직후 중량 × 100 (측정하지 않은 날은 비워 둠)`,
+  { id: 'wl1', calc: 'loss', f: [
+    { k: 'label_w', u: 'g', label: '표시' },
+    { k: 'pack_w', u: 'g', label: '직후' },
+    { k: 'store_w', u: 'g', label: `${LOSS_HOURS}h후` },
+  ] }));
+
+
+
+// ── 생산일보 → 제품군 분류 (부장님 process_log.html과 동일 규칙) ──
+const LEDGER_CODE_GROUP = { 'P-206': 'skip', 'P-548': 'skip', 'P-608': null };
+function ledgerGroup(o) {
+  const n = o.pname || '';
+  if (o.code in LEDGER_CODE_GROUP) return LEDGER_CODE_GROUP[o.code];
+  if (/우렁/.test(n)) return 'snail';
+  if (o.ch !== 'MF') {   // 제조방법설명서 기준 세부 양식 (MF 산지직송은 아래 MF 양식 유지)
+    if (/서대/.test(n)) return 'seodae';
+    if (/꼬막장/.test(n)) return 'kkomak';
+    if (/문어/.test(n) && /슬라이스/.test(n)) return 'octopus';
+    if (/바지락/.test(n) && !/데친|자숙/.test(n)) return 'clam';
+    if (/오만둥이|멍게/.test(n) && !/데친|자숙/.test(n)) return 'mdoong';
+    if (/오징어/.test(n) && !/한치/.test(n)) return 'squid';
+  }   // 탈각 공정이 있는 우렁살은 채널과 관계없이 우렁살 양식
+  if (o.ch === 'MF') return /손질/.test(n) ? 'mf_trim' : 'mf_live';
+  if (/순살.*게장/.test(n)) return 'sunsal';
+  if (/게장/.test(n)) return 'gejang';
+  if (/데친|자숙|숙회/.test(n)) return 'boiled';
+  if (/굴|오만둥이|멍게/.test(n)) return 'oyster';
+  if (/가리비/.test(n)) return 'scallop';
+  if (/새우젓/.test(n)) return 'shrimp';
+  if (/조기|참돔|가자미|고등어|황돔/.test(n)) return 'fish';
+  if (/오징어|꽃게|금게|한치/.test(n)) return 'crab_cut';
+  return null;
+}
+// ── 설비·도구 결손/마모 점검 (2026.10.30 개정 양식) — 새 일지 양식과 동일 ──
+const EQUIP_FROM = '2026-10-30';
+const EQUIP = {
+  boiled: [
+    { id:'eq1', proc:'자숙기', item:'스크류', std:'스크류 날개 결손·변형·마모 없을 것 / 스크류 축·고정 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq2', proc:'자숙기', item:'이송망·체인', std:'이송망(메쉬) 찢어짐·철사 끊어짐 없을 것 / 체인 연결핀·고정 클립 탈락 없을 것', yn:true },
+    { id:'eq3', proc:'브러쉬 세척기', item:'브러쉬모', std:'브러쉬모 빠짐·끊어짐·과도한 마모 없을 것 (와이어모 결손 여부 확인)', yn:true },
+    { id:'eq4', proc:'브러쉬 세척기', item:'고정부·커버', std:'브러쉬 고정 볼트·너트, 커버 나사 풀림·탈락 없을 것', yn:true },
+    { id:'eq6', proc:'작업도구', item:'수량·결손', std:'칼·가위·집게·스쿱·바스켓 등 반입·반출 수량 일치 / 날 이빠짐·파손·결손 없을 것',
+      yn:true, f:[{ k:'cnt', u:'개', label:'수량' }] },
+  ],
+  // 우렁살 — 공정 순서대로 (브러쉬 세척 → 자숙 → 탈각). 탈각 설비는 우렁살에만 해당
+  snail: [
+    { id:'eq1', proc:'브러쉬 세척기', item:'브러쉬모', std:'브러쉬모 빠짐·끊어짐·과도한 마모 없을 것 (와이어모 결손 여부 확인)', yn:true },
+    { id:'eq2', proc:'브러쉬 세척기', item:'고정부·커버', std:'브러쉬 고정 볼트·너트, 커버 나사 풀림·탈락 없을 것', yn:true },
+    { id:'eq3', proc:'자숙기', item:'스크류', std:'스크류 날개 결손·변형·마모 없을 것 / 스크류 축·고정 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq4', proc:'자숙기', item:'이송망·체인', std:'이송망(메쉬) 찢어짐·철사 끊어짐 없을 것 / 체인 연결핀·고정 클립 탈락 없을 것', yn:true },
+    { id:'eq5', proc:'탈각 설비', item:'탈각부', std:'탈각 날·핀·롤러 결손·변형·마모 없을 것 / 볼트·너트 풀림·탈락 없을 것', yn:true },
+    { id:'eq6', proc:'작업도구', item:'수량·결손', std:'칼·가위·집게·스쿱·바스켓 등 반입·반출 수량 일치 / 날 이빠짐·파손·결손 없을 것',
+      yn:true, f:[{ k:'cnt', u:'개', label:'수량' }] },
+  ],
+};
+
+EQUIP.octopus = EQUIP.boiled.filter(e => ['eq1', 'eq2', 'eq6'].indexOf(e.id) >= 0);   // 문어 슬라이스: 자숙기·작업도구만 (브러쉬 세척기 없음)
+const NEW_ROW_FROM = '2026-11-02';   // 탈수(dw1)·저울 점검(sc1)·감량률(wl1) 행이 생긴 날 — 그 이전 날짜 일지에는 넣지 않음
+const rowsOf = s => PRODUCTS[s.group].rows.filter(r => !(['dw1', 'sc1', 'wl1'].indexOf(r.id) >= 0 && s.date < NEW_ROW_FROM));
+const equipOf = s => (s.date >= EQUIP_FROM && EQUIP[s.group]) ? EQUIP[s.group] : [];
+function hash(x) { let h = 5381; for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) >>> 0; return h; }
+const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const isMF = s => /^mf$/i.test(s.ch || '');
+// 점검 시각(임의 배정): 냉동 ① 오전 / 냉장 ② 오후, MF는 11~14시 생산·출고 시간대
+function checkTime(s, round) {
+  const mf = isMF(s), both = mf && activeRound(s, 'r1') && activeRound(s, 'r2');
+  const lo = mf ? (both ? (round === 'r1' ? 11 * 60 + 10 : 12 * 60 + 40) : 11 * 60 + 10) : (round === 'r1' ? 8 * 60 + 40 : 13 * 60 + 30);
+  const span = mf ? (both ? 70 : 160) : (round === 'r1' ? 160 : 170);
+  return hm(lo + hash(s.date + '|' + s.group + '|' + s.ch + '|' + round) % (span + 1));
+}
+// 냉동/냉장 추정 (제품명 기준) — 펼쳐서 제품별로 수정 가능
+function tempOf(o) {
+  const n = (o.pname || '') + ' ' + (o.memo || '');
+  if (/냉동|급속/.test(n)) return '냉동';
+  if (o.ch === 'MF') return '냉장';
+  if (/꼬막장|서대/.test(n) || (/바지락살/.test(n) && !/생물|활 |데친|자숙/.test(n))) return '냉동';   // 제조방법설명서: 냉동 제품
+  if (/생물|활 |오만둥이|멍게|문어|양념게장|데친|자숙|살\s*\d/.test(n)) return '냉장';   // 데친·자숙·"살" 제품은 냉장
+  if (/게장/.test(n)) return /2\.5\s*kg/i.test(n) ? '냉장' : '냉동';
+  return '냉동';
+}
+const lgShort = n => String(n || '').replace(/^위드프레쉬\s*(산지직송\s*)?/, '').replace(/\s*1개$/, '').trim();
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function numVal(id) { const el = document.getElementById(id); if (!el || el.value === '') return null; const n = parseFloat(el.value); return isNaN(n) ? null : n; }
+function todayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function fmtDate(d) { const w = ['일', '월', '화', '수', '목', '금', '토'][new Date(d + 'T00:00:00').getDay()]; return d + ' (' + w + ')'; }
+const isLate = d => d < todayStr();
+
+// ── 상태 ────────────────────────────────────────────────
+let SHEETS = [];
+const DONE = {};
+const PHOTOS = {};
+let BULK_RUNNING = false;
+const FORM_ORDER = Object.keys(PRODUCTS);
+// 제조방법설명서 기준 세부 양식 → 일지 조회 화면이 아는 기존 제품군(meta.product)으로 저장하고, 세부 양식은 meta.variant에 기록
+const PARENT = { seodae: 'fish', mdoong: 'oyster', clam: 'scallop', kkomak: 'gejang', squid: 'crab_cut', octopus: 'boiled' };
+
+function nameList(items) {
+  const names = items.map(it => it.name);
+  return names.slice(0, 2).join(', ') + (names.length > 2 ? ' 외 ' + (names.length - 2) : '');
+}
+function itemsOf(s, round) { return s.items.filter(it => (it.temp === '냉동') === (round === 'r1')); }
+function activeRound(s, round) { return itemsOf(s, round).length > 0; }
+function roundLabel(s, round) {
+  const it = itemsOf(s, round);
+  if (!it.length) return '';
+  const head = isMF(s) ? (round === 'r1' ? '냉동 — ' : '냉장 — ') : (round === 'r1' ? '오전 · 냉동 — ' : '오후 · 냉장 — ');
+  return checkTime(s, round) + ' ' + head + nameList(it);
+}
+function productTitle(s) {
+  const all = s.items.slice().sort((a, b) => b.qty - a.qty);
+  const names = all.map(it => it.name);
+  return (s.ch ? '[' + s.ch + '] ' : '') + names.slice(0, 2).join(' / ') + (names.length > 2 ? ' 외 ' + (names.length - 2) : '');
+}
+
+// ── 생산일보 불러오기 ─────────────────────────────────────
+async function loadLedger() {
+  const from = val('d-from'), to = val('d-to');
+  const msg = document.getElementById('load-msg');
+  if (!from || !to || from > to) { msg.innerHTML = '<div class="msg err">시작일·종료일을 확인하세요.</div>'; return; }
+  const btn = document.getElementById('btn-load');
+  btn.disabled = true; msg.innerHTML = '<div class="msg">생산일보 불러오는 중...</div>';
+  try {
+    const r = await fetch(LEDGER_URL + '/쿠팡수불/out.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const all = (Array.isArray(d) ? d : Object.values(d || {})).filter(Boolean);
+    const rows = all.filter(o => o.date >= from && o.date <= to);
+    if (!rows.length) { msg.innerHTML = '<div class="msg err">' + from + ' ~ ' + to + ' 생산일보에 생산내역이 없습니다.</div>'; return; }
+
+    // 이미 작성된 일지 / 작성 대기(draft) 일지 조회
+    const existing = {}, drafts = {};
+    const months = new Set(); rows.forEach(o => months.add(o.date.slice(0, 7)));
+    for (const m of months) {
+      const [y, mo] = m.split('-');
+      try {
+        const logs = await fetch(FIREBASE_URL + '/process_logs/' + y + '/' + mo + '.json').then(x => x.json());
+        Object.entries(logs || {}).forEach(([id, l]) => {
+          if (!l || !l.meta) return;
+          const k = l.meta.date + '|' + (l.meta.variant || l.meta.product);
+          if (l.meta.status === 'draft') { drafts[k] = id; return; }
+          // 채널 정보가 있으면 그 채널만, 없으면(채널 구분 없이 쓴 일지) 모든 채널을 이미 작성한 것으로 봄
+          const chs = l.meta.channel ? [l.meta.channel] : (l.ledger && Array.isArray(l.ledger.items) && l.ledger.items.length ? [...new Set(l.ledger.items.map(x => x.ch || '*'))] : ['*']);
+          const ex = existing[k] = existing[k] || {}; chs.forEach(c => { ex[c] = (ex[c] || 0) + 1; });
+        });
+      } catch (e) { console.warn('기존 일지 조회 실패', m, e); }
+    }
+
+    // (날짜, 제품군) → 품목(code|lot)
+    const G = new Map();
+    rows.forEach(o => {
+      const g = ledgerGroup(o); if (g === 'skip') return;
+      const ch = o.ch || '미분류';
+      const key = o.date + '|' + (g || '?') + '|' + ch;
+      const x = G.get(key) || { date: o.date, group: g, ch, items: new Map(), raws: new Set() };
+      const ik = o.code + '|' + o.lot;
+      const it = x.items.get(ik) || { code: o.code || '', name: lgShort(o.pname), lot: o.lot || '', qty: 0, ch: o.ch, temp: tempOf(o), thaw: /해동/.test((o.pname || '') + (o.memo || '')) };
+      it.qty += Number(o.qty) || 0; x.items.set(ik, it);
+      (Array.isArray(o.raws) ? o.raws : Object.values(o.raws || {})).forEach(rr => { if (rr && rr.lot && !rr.sauce) String(rr.lot).split(',').forEach(l => x.raws.add(l.trim())); });
+      G.set(key, x);
+    });
+
+    const CH_ORDER = ['위드', '서풍', '상라', 'MF'], usedDraft = {};
+    SHEETS = [...G.values()].map(x => {
+      const k = x.date + '|' + x.group, ex = existing[k] || {};
+      return { date: x.date, group: x.group, ch: x.ch, items: [...x.items.values()].sort((a, b) => b.qty - a.qty), raws: [...x.raws].sort(),
+               existing: x.group ? (ex['*'] || ex[x.ch] || 0) : 0, draftId: null, _dk: k };
+    }).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : ((a.group ? FORM_ORDER.indexOf(a.group) : 99) - (b.group ? FORM_ORDER.indexOf(b.group) : 99)) || (CH_ORDER.indexOf(a.ch) + 1 || 9) - (CH_ORDER.indexOf(b.ch) + 1 || 9));
+    SHEETS.forEach(s => { if (s.group && !s.existing && drafts[s._dk] && !usedDraft[s._dk]) { s.draftId = drafts[s._dk]; usedDraft[s._dk] = 1; } });   // 작성 대기 일지는 첫 장에만 연결
+    Object.keys(DONE).forEach(k => delete DONE[k]);
+
+    const days = new Set(SHEETS.map(s => s.date)).size;
+    const ex = SHEETS.filter(s => s.existing).length;
+    msg.innerHTML = '<div class="msg">' + from + ' ~ ' + to + ' · 생산일 <b>' + days + '일</b> · 일지 <b>' + SHEETS.length + '장</b>' +
+      (ex ? ' (이미 작성된 ' + ex + '장은 제외)' : '') + '</div>';
+    document.getElementById('sticky').classList.add('show');
+    renderList();
+  } catch (e) {
+    console.error(e);
+    msg.innerHTML = '<div class="msg err">생산일보를 불러오지 못했습니다 — 인터넷 연결을 확인하세요.</div>';
+  } finally { btn.disabled = false; }
+}
+
+// ── 목록 ─────────────────────────────────────────────────
+function metaHTML(s) {
+  const parts = ['r1', 'r2'].map(r => {
+    const it = itemsOf(s, r);
+    return it.length ? '<span class="pill ' + (r === 'r1' ? 'frz' : 'chl') + '">' + (r === 'r1' ? '① 오전·냉동' : '② 오후·냉장') + '</span>' + esc(nameList(it)) : '';
+  }).filter(Boolean);
+  return parts.join('<br>');
+}
+function renderList() {
+  let html = '', last = '';
+  SHEETS.forEach((s, i) => {
+    if (s.date !== last) {
+      last = s.date;
+      html += '<div class="day-head">' + fmtDate(s.date) + ' · ' + SHEETS.filter(x => x.date === s.date).length + '장' + (isLate(s.date) ? ' · 사후 전산입력' : '') + '</div>';
+    }
+    const cls = s.existing ? ' exist' : DONE[i] ? ' done' : !s.group ? ' warn' : '';
+    html += '<div class="sheet' + cls + '" id="sheet-' + i + '">' +
+      '<div class="sheet-head" onclick="toggleSheet(' + i + ')"><div class="dot"></div>' +
+      '<div><div class="sheet-title">' + esc((s.group ? PRODUCTS[s.group].label : '제품군 선택 필요') + (s.ch ? ' · ' + s.ch : '')) + '</div><div class="sheet-meta">' + metaHTML(s) + '</div></div>' +
+      '<div>' + (s.existing ? '<span class="tag exist">작성 ' + s.existing + '건</span>' : !s.group ? '<span class="tag need">양식 선택</span>' : s.draftId ? '<span class="tag late">작성 대기</span>' : '') + '</div></div>' +
+      '<div class="sheet-body" id="body-' + i + '"></div></div>';
+  });
+  document.getElementById('list').innerHTML = html;
+  refreshBulk(); updateProgress();
+}
+function rowMeta(i) { const el = document.querySelector('#sheet-' + i + ' .sheet-meta'); if (el) el.innerHTML = metaHTML(SHEETS[i]); }
+
+function toggleSheet(i) {
+  const el = document.getElementById('sheet-' + i);
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.sheet.open').forEach(x => x.classList.remove('open'));
+  if (open) return;
+  if (!DONE[i] && !SHEETS[i].existing && !isBuilt(i)) buildBody(i);
+  el.classList.add('open');
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+}
+function isBuilt(i) { const b = document.getElementById('body-' + i); return !!(b && b.dataset.built); }
+function buildBody(i) {
+  const b = document.getElementById('body-' + i);
+  b.innerHTML = sheetHTML(i); b.dataset.built = '1'; renderPhotos('s' + i);
+}
+
+// ── 기록칸 ───────────────────────────────────────────────
+function recordCell(i, row, round) {
+  const s = SHEETS[i];
+  if (!applies(s, row, round) && !(row.cond && activeRound(s, round) && !(row.only === 'frz' && round !== 'r1'))) return '<div style="font-size:11px;color:#bbb;text-align:center;padding:8px 0;">—</div>';
+  let html = '';
+  if (row.date) html += '<input class="rec-date" type="date" id="' + i + '_' + row.id + '_' + round + '_date" value="' + s.date + '">';
+  if (row.f && row.f.length) {
+    html += '<div class="rec-fields">' + row.f.map(f =>
+      '<div class="rec-f-row">' + (f.label ? '<span class="f-label">' + f.label + '</span>' : '') +
+      '<input class="num-input" type="number" step="0.1" inputmode="decimal" id="' + i + '_' + row.id + '_' + round + '_' + f.k + '" placeholder="—">' +
+      (f.u ? '<span class="f-unit">' + f.u + '</span>' : '') + '</div>').join('') + '</div>';
+  }
+  if (row.yn) {
+    const on = defaultYes(s, row, round);
+    html += '<div class="yn-btns">' +
+      '<button type="button" class="yn-btn yes' + (on ? ' active' : '') + '" id="yes-' + i + '-' + row.id + '-' + round + '" onclick="setYN(' + i + ',\'' + row.id + '\',\'' + round + '\',true)">적</button>' +
+      '<button type="button" class="yn-btn no" id="no-' + i + '-' + row.id + '-' + round + '" onclick="setYN(' + i + ',\'' + row.id + '\',\'' + round + '\',false)">부</button></div>';
+  }
+  return html || '<div style="font-size:11px;color:#bbb;text-align:center;">—</div>';
+}
+// 해당 없는 칸(냉장 제품의 급속동결, 해동 제품 없는 MF 손질의 해동, 슬라이스 아닌 오징어의 슬라이스 등)은 적/부 없이 비워 둠
+function applies(s, row, round) {
+  if (!activeRound(s, round)) return false;
+  if (row.only === 'frz' && round !== 'r1') return false;
+  if (row.only === 'chl' && round !== 'r2') return false;
+  if (s.group === 'mf_trim' && row.proc === '해동' && !itemsOf(s, round).some(it => it.thaw)) return false;
+  if (s.group === 'squid' && row.proc === '슬라이스' && !itemsOf(s, round).some(it => /슬라이스|숙회/.test(it.name))) return false;
+  return true;
+}
+function defaultYes(s, row, round) {
+  if (!row.yn || row.calc || row.cond || !applies(s, row, round)) return false;
+  return true;
+}
+
+function sheetHTML(i) {
+  const s = SHEETS[i];
+  const late = isLate(s.date);
+  const formSel = s.group ? '' :
+    '<div class="field full"><label>제품군(점검 양식) 선택 <span style="color:#c62828">— 자동 분류 불가</span></label><select id="form-' + i + '" onchange="pickForm(' + i + ')"><option value="">선택하세요</option>' +
+    FORM_ORDER.map(k => '<option value="' + k + '">' + esc(PRODUCTS[k].label) + '</option>').join('') + '</select></div>';
+  const itemRows = s.items.map((it, j) =>
+    '<div class="it-row"><div class="it-name">' + esc(it.name) + '<small>' + esc(it.code) + ' · ' + esc(it.lot) + ' · ' + it.qty.toLocaleString() + '개 · ' + esc(it.ch) + (it.thaw ? ' · 해동' : '') + '</small></div>' +
+    '<div class="tbtns"><button type="button" class="tbtn frz' + (it.temp === '냉동' ? ' on' : '') + '" onclick="setTemp(' + i + ',' + j + ',\'냉동\')">냉동 · 오전</button>' +
+    '<button type="button" class="tbtn chl' + (it.temp === '냉장' ? ' on' : '') + '" onclick="setTemp(' + i + ',' + j + ',\'냉장\')">냉장 · 오후</button></div></div>').join('');
+
+  if (!s.group) {
+    return '<div class="section-title">■ 제품군 선택</div><div class="info-grid">' + formSel + '</div>' +
+      '<div class="items-tbl">' + itemRows + '</div>' +
+      '<div class="approve-line">양식을 고르면 점검표가 열립니다. 자동 분류에서 제외된 품목입니다(부장님 일지 규칙).</div>';
+  }
+  const p = PRODUCTS[s.group];
+  const rows = rowsOf(s).map(row =>
+    '<div class="proc-item" id="row-' + i + '-' + row.id + '">' +
+      '<div class="proc-head"><span class="proc-name">' + row.proc + '</span><span class="proc-cat">' + row.item + '</span></div>' +
+      '<div class="proc-std">' + row.std + '</div>' +
+      '<div class="proc-rounds">' +
+        '<div class="round-col' + (activeRound(s, 'r1') ? '' : ' empty') + '"><div class="round-title">' + esc(roundLabel(s, 'r1') || '① (해당없음)') + '</div>' + recordCell(i, row, 'r1') + '</div>' +
+        '<div class="round-col' + (activeRound(s, 'r2') ? '' : ' empty') + '"><div class="round-title">' + esc(roundLabel(s, 'r2') || '② (해당없음)') + '</div>' + recordCell(i, row, 'r2') + '</div>' +
+      '</div>' +
+      (row.yn ? '<div class="proc-action" id="action-row-' + i + '-' + row.id + '"><label>⚠ 부적합 조치사항</label><textarea id="action-' + i + '-' + row.id + '" placeholder="조치 내용을 입력하세요"></textarea></div>' : '') +
+    '</div>').join('');
+
+  return '<div class="section-title">■ 기본정보</div>' +
+    '<div class="info-grid">' +
+      '<div class="field full"><label>제품군 (점검 양식)</label><input type="text" value="' + esc(p.label) + '" readonly style="background:#f4f6f8;color:#667"></div>' +
+      '<div class="field full"><label>제품명</label><input type="text" id="pname-' + i + '" value="' + esc(productTitle(s)) + '"></div>' +
+      '<div class="field full"><label>점검일자</label><input type="date" id="date-' + i + '" value="' + s.date + '"></div>' +
+      '<div class="field"><label>점검자</label><select id="insp-' + i + '"><option value="">선택하세요</option><option value="전혜진 계장" selected>전혜진 계장</option><option value="김현우 부장">김현우 부장</option></select></div>' +
+      '<div class="field"><label>확인자</label><select id="conf-' + i + '"><option value="">선택하세요</option><option value="김현우 부장" selected>김현우 부장</option></select></div>' +
+    '</div><div class="approve-line">결재란 구성: <b>' + p.approvers.join(' · ') + '</b> (실물 양식 기준)</div>' +
+
+    '<div class="sub-head">■ 생산 제품 — 냉동은 ① 오전, 냉장은 ② 오후</div><div class="items-tbl">' + itemRows + '</div>' +
+
+    '<div class="sub-head">■ 공정별 점검결과 <button type="button" class="btn-all" onclick="markAll(' + i + ')">전공정 «적» 되돌리기</button></div>' + rows + equipHTML(i) +
+
+    '<div class="sub-head">■ 날인확인 (현물직인)</div><div class="photo-note">현물 직인을 촬영해 첨부하세요. (최대 4장, 자동 압축)</div>' +
+    '<div class="photo-actions"><label class="btn-photo">📷 사진 촬영 / 선택<input type="file" accept="image/*" capture="environment" multiple hidden onchange="addPhotos(this,\'s' + i + '\')"></label><span class="photo-count" id="cnt-s' + i + '">0 / 4장</span></div>' +
+    '<div id="grid-s' + i + '"></div>' +
+
+    '<div class="sub-head">■ 비고</div>' + (late ? '<div class="late-box">📌 <b>사후 전산입력</b> — ' + s.date + ' 일지를 오늘(' + todayStr() + ') 입력합니다. 비고의 입력 근거를 실제와 맞게 확인하세요.</div>' : '') +
+    '<div class="notes-area"><textarea id="note-' + i + '">' + esc(noteFor(s)) + '</textarea></div>' +
+    '<div class="sub-head">■ 확인 (특이사항·개선조치)</div><div class="notes-area"><textarea id="cnote-' + i + '" placeholder="확인 내용 및 개선조치를 입력하세요"></textarea></div>' +
+    '<button class="btn-save" id="btn-' + i + '" onclick="saveSheet(' + i + ')">저 장 하 기</button>';
+}
+function equipCell(i, row, round) {
+  let html = '';
+  if (row.f && row.f.length) html += '<div class="rec-fields">' + row.f.map(f => '<div class="rec-f-row">' + (f.label ? '<span class="f-label">' + f.label + '</span>' : '') +
+    '<input class="num-input" type="number" step="0.1" inputmode="decimal" id="' + i + '_' + row.id + '_' + round + '_' + f.k + '" placeholder="—">' + (f.u ? '<span class="f-unit">' + f.u + '</span>' : '') + '</div>').join('') + '</div>';
+  html += '<div class="yn-btns"><button type="button" class="yn-btn yes active" id="yes-' + i + '-' + row.id + '-' + round + '" onclick="setYN(' + i + ',\'' + row.id + '\',\'' + round + '\',true)">적</button>' +
+    '<button type="button" class="yn-btn no" id="no-' + i + '-' + row.id + '-' + round + '" onclick="setYN(' + i + ',\'' + row.id + '\',\'' + round + '\',false)">부</button></div>';
+  return html;
+}
+function equipHTML(i) {
+  const eq = equipOf(SHEETS[i]); if (!eq.length) return '';
+  return '<div class="sub-head">■ 설비·도구 결손/마모 점검 (2026.10.30 개정 — 작업 전 / 작업 후)</div>' + eq.map(row =>
+    '<div class="proc-item" id="row-' + i + '-' + row.id + '"><div class="proc-head"><span class="proc-name">' + row.proc + '</span><span class="proc-cat">' + row.item + '</span></div>' +
+    '<div class="proc-std">' + row.std + '</div><div class="proc-rounds"><div class="round-col"><div class="round-title">작업 전</div>' + equipCell(i, row, 'r1') + '</div>' +
+    '<div class="round-col"><div class="round-title">작업 후</div>' + equipCell(i, row, 'r2') + '</div></div>' +
+    '<div class="proc-action" id="action-row-' + i + '-' + row.id + '"><label>⚠ 부적합 조치사항</label><textarea id="action-' + i + '-' + row.id + '" placeholder="조치 내용을 입력하세요"></textarea></div></div>').join('');
+}
+function noteFor(s) {
+  return isLate(s.date) ? '사후 전산입력 — 입력 근거: ' + LEDGER_SOURCE + ' ' + s.date + ' 생산내역 기준 (점검 원본 기록과 대조 필요). 점검 시각은 임의 배정값' + (isMF(s) ? '(MF 11~14시 생산·출고 시간대)' : '') + '.' : '';
+}
+
+function setTemp(i, j, t) {
+  SHEETS[i].items[j].temp = t;
+  buildBody(i); rowMeta(i);
+}
+function pickForm(i) {
+  const k = val('form-' + i); if (!k) return;
+  SHEETS[i].group = k; renderList();
+  const el = document.getElementById('sheet-' + i); if (el) { buildBody(i); el.classList.add('open'); }
+}
+
+// ── 적/부 ────────────────────────────────────────────────
+function setYN(i, id, round, v) {
+  const yes = document.getElementById('yes-' + i + '-' + id + '-' + round), no = document.getElementById('no-' + i + '-' + id + '-' + round);
+  if (!yes || !no) return;
+  const already = v ? yes.classList.contains('active') : no.classList.contains('active');
+  yes.classList.remove('active'); no.classList.remove('active');
+  if (!already) (v ? yes : no).classList.add('active');
+  const bad = ['r1', 'r2'].some(r => { const e = document.getElementById('no-' + i + '-' + id + '-' + r); return e && e.classList.contains('active'); });
+  const row = document.getElementById('row-' + i + '-' + id), act = document.getElementById('action-row-' + i + '-' + id);
+  if (row) row.classList.toggle('has-alert', bad);
+  if (act) act.classList.toggle('visible', bad);
+}
+function getYN(i, id, round) {
+  const yes = document.getElementById('yes-' + i + '-' + id + '-' + round), no = document.getElementById('no-' + i + '-' + id + '-' + round);
+  if (yes && yes.classList.contains('active')) return true;
+  if (no && no.classList.contains('active')) return false;
+  return null;
+}
+function markAll(i) {
+  const s = SHEETS[i];
+  equipOf(s).forEach(row => ['r1', 'r2'].forEach(r => { const y = document.getElementById('yes-' + i + '-' + row.id + '-' + r); if (y && !y.classList.contains('active')) setYN(i, row.id, r, true); }));
+  rowsOf(s).forEach(row => ['r1', 'r2'].forEach(r => { if (defaultYes(s, row, r)) { const y = document.getElementById('yes-' + i + '-' + row.id + '-' + r); if (y && !y.classList.contains('active')) setYN(i, row.id, r, true); } }));
+}
+
+// ── 사진 ─────────────────────────────────────────────────
+const MAX_PHOTOS = 4;
+function compressImage(file, maxSide, quality) {
+  maxSide = maxSide || 900; quality = quality || 0.62;
+  return new Promise((resolve, reject) => {
+    if (!file.type || file.type.indexOf('image/') !== 0) { reject(new Error('not an image')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read fail'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode fail'));
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+        let q = quality, url = c.toDataURL('image/jpeg', q);
+        while (url.length > 900 * 1024 && q > 0.35) { q -= 0.12; url = c.toDataURL('image/jpeg', q); }
+        resolve(url);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function addPhotos(input, key) {
+  const files = Array.from(input.files || []); input.value = '';
+  if (!files.length) return;
+  PHOTOS[key] = PHOTOS[key] || []; let skipped = 0;
+  for (const f of files) {
+    if (PHOTOS[key].length >= MAX_PHOTOS) { skipped++; continue; }
+    try { PHOTOS[key].push(await compressImage(f)); } catch (e) { console.warn(e); showToast('이미지를 불러오지 못했습니다.', 'error'); }
+  }
+  if (skipped) showToast('사진은 최대 ' + MAX_PHOTOS + '장까지 첨부됩니다.', 'error');
+  renderPhotos(key);
+}
+function removePhoto(key, idx) { if (PHOTOS[key]) { PHOTOS[key].splice(idx, 1); renderPhotos(key); } }
+function renderPhotos(key) {
+  const list = PHOTOS[key] || [], grid = document.getElementById('grid-' + key), cnt = document.getElementById('cnt-' + key);
+  if (cnt) cnt.textContent = list.length + ' / ' + MAX_PHOTOS + '장';
+  if (!grid) return;
+  if (!list.length) { grid.className = ''; grid.innerHTML = '<div class="photo-empty">첨부된 사진이 없습니다</div>'; return; }
+  grid.className = 'photo-grid';
+  grid.innerHTML = list.map((src, n) => '<div class="photo-thumb"><img src="' + src + '" alt="첨부 ' + (n + 1) + '"><button type="button" class="photo-del" onclick="removePhoto(\'' + key + '\',' + n + ')" aria-label="삭제">✕</button></div>').join('');
+}
+
+// ── payload ──────────────────────────────────────────────
+function buildPayload(i) {
+  const s = SHEETS[i], p = PRODUCTS[s.group], built = isBuilt(i);
+  const date = built ? val('date-' + i) : s.date;
+  const productName = built ? val('pname-' + i) : productTitle(s);
+  const inspector = built ? val('insp-' + i) : INSPECTOR;
+  const confirmer = built ? val('conf-' + i) : CONFIRMER;
+  if (!date) return '점검일자를 입력하세요.';
+  if (!productName) return '제품명을 입력하세요.';
+  if (!inspector) return '점검자를 선택하세요.';
+  if (!confirmer) return '확인자를 선택하세요.';
+  const late = isLate(date);
+  const note = built ? val('note-' + i) : noteFor(s);
+  if (late && !note) return '지난 날짜 일지는 비고에 입력 근거를 적어야 저장됩니다.';
+
+  const checks = {}; let hasAlert = false;
+  rowsOf(s).forEach(row => {
+    const entry = { proc: row.proc, item: row.item, std: row.std };
+    ['r1', 'r2'].forEach(round => {
+      const act = activeRound(s, round);
+      let r;
+      const ap = applies(s, row, round) || (row.cond && act && !(row.only === 'frz' && round !== 'r1'));   // 해당 없는 칸은 빈칸(null)로 저장
+      if (built) r = { value: ap && row.yn ? getYN(i, row.id, round) : null };
+      else r = { value: defaultYes(s, row, round) ? true : null };
+      if (row.date) { const el = document.getElementById(i + '_' + row.id + '_' + round + '_date'); r.date = built ? (el && el.value ? el.value : null) : (ap ? s.date : null); }
+      if (row.f) row.f.forEach(f => { r[f.k] = built && ap ? numVal(i + '_' + row.id + '_' + round + '_' + f.k) : null; });
+      if (r.value === false) hasAlert = true;
+      entry[round] = r;
+    });
+    const a = document.getElementById('action-' + i + '-' + row.id);
+    entry.action = built && a ? a.value.trim() : '';
+    checks[row.id] = entry;
+  });
+
+  const eq = equipOf(s), equip_checks = {};
+  eq.forEach(row => {
+    const entry = { proc: row.proc, item: row.item, std: row.std };
+    ['r1', 'r2'].forEach(round => {
+      const r = { value: built ? getYN(i, row.id, round) : true };
+      if (row.f) row.f.forEach(f => { r[f.k] = built ? numVal(i + '_' + row.id + '_' + round + '_' + f.k) : null; });
+      if (r.value === false) hasAlert = true;
+      entry[round] = r;
+    });
+    const a = document.getElementById('action-' + i + '-' + row.id);
+    entry.action = built && a ? a.value.trim() : '';
+    equip_checks[row.id] = entry;
+  });
+  const payload = {
+    meta: { date, inspector, confirmer, product: PARENT[s.group] || s.group, variant: PARENT[s.group] ? s.group : null, channel: s.ch || null, form_rev: eq.length ? EQUIP_FROM : null, product_label: p.label, product_name: productName, approvers: p.approvers,
+            created_at: Date.now(), reviewed: false, reviewed_at: null },
+    round_labels: { r1: roundLabel(s, 'r1'), r2: roundLabel(s, 'r2') },
+    checks,
+    ...(eq.length ? { equip_checks, equip_labels: { r1: '작업 전', r2: '작업 후' } } : {}),
+    photos: { stamp: PHOTOS['s' + i] || [] },
+    note,
+    confirm_note: built ? val('cnote-' + i) : '',
+    has_alert: hasAlert,
+    ledger: { date: s.date, source: LEDGER_SOURCE,
+              items: s.items.map(it => ({ code: it.code, name: it.name, lot: it.lot, qty: it.qty, ch: it.ch, thaw: it.thaw, temp: it.temp })),
+              raw_lots: s.raws }
+  };
+  if (late) { payload.meta.late_entry = true; payload.meta.late_entered_on = todayStr(); }
+  return payload;
+}
+
+async function postPayload(i, payload) {
+  const s = SHEETS[i], [y, m] = payload.meta.date.split('-');
+  const useDraft = !!s.draftId && s.date === payload.meta.date;
+  if (useDraft) payload.meta.status = 'done';
+  const res = await fetch(useDraft ? FIREBASE_URL + '/process_logs/' + y + '/' + m + '/' + s.draftId + '.json' : FIREBASE_URL + '/process_logs/' + y + '/' + m + '.json',
+    { method: useDraft ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+function lateNeedsConfirm(idxs) { return idxs.some(i => isLate(SHEETS[i].date)) && !document.getElementById('confirm-late').checked; }
+
+function markDone(i, label) {
+  DONE[i] = true;
+  const el = document.getElementById('sheet-' + i);
+  if (el) { el.classList.add('done'); el.classList.remove('open'); }
+  const b = document.getElementById('body-' + i);
+  if (b) { b.dataset.built = '1'; b.innerHTML = '<div class="saved-note">✓ 저장되었습니다 — ' + esc(label) + '</div>'; }
+  updateProgress(); refreshBulk();
+}
+
+async function saveSheet(i) {
+  if (lateNeedsConfirm([i])) { showToast('상단의 «실제 점검 기록 확인» 체크가 필요합니다.', 'error'); return; }
+  const payload = buildPayload(i);
+  if (typeof payload === 'string') { showToast(payload, 'error'); return; }
+  const btn = document.getElementById('btn-' + i); btn.disabled = true; btn.textContent = '저장 중...';
+  try { await postPayload(i, payload); showToast('저장 완료! ✓', 'success'); markDone(i, payload.meta.product_name); }
+  catch (e) { console.error(e); showToast('저장 실패 — 네트워크를 확인하세요.', 'error'); btn.disabled = false; btn.textContent = '저 장 하 기'; }
+}
+
+// ── 일괄 저장 ─────────────────────────────────────────────
+function targets() { return SHEETS.map((s, i) => i).filter(i => !DONE[i] && !SHEETS[i].existing && SHEETS[i].group); }
+function refreshBulk() {
+  const t = targets(), anyLate = t.some(i => isLate(SHEETS[i].date));
+  const wrap = document.getElementById('confirm-wrap'); if (wrap) wrap.style.display = anyLate ? 'flex' : 'none';
+  const btn = document.getElementById('btn-bulk'); if (!btn) return;
+  btn.disabled = !t.length || (anyLate && !document.getElementById('confirm-late').checked);
+  btn.textContent = t.length ? '⇪ 미저장 ' + t.length + '장 한꺼번에 저장' : '저장할 일지가 없습니다';
+}
+function askBulk() {
+  const t = targets(); if (!t.length) return;
+  if (lateNeedsConfirm(t)) { showToast('«실제 점검 기록 확인» 체크가 필요합니다.', 'error'); return; }
+  const late = t.filter(i => isLate(SHEETS[i].date)).length;
+  const unres = SHEETS.filter((s, i) => !DONE[i] && !s.existing && !s.group).length;
+  const withPhoto = t.filter(i => (PHOTOS['s' + i] || []).length).length;
+  document.getElementById('bulk-ask').innerHTML = '<div class="bulk-box"><div class="bulk-q"><b>' + t.length + '장</b>을 한꺼번에 저장합니다.</div><div class="bulk-detail">' +
+    '· 전 공정 <b>적합(적)</b> · ① 오전=냉동 / ② 오후=냉장 (MF 11~14시) · 제조일자=생산일 · 채널별 일지<br>· 측정값(온도·중량·시간)은 비워서 저장 · 점검 시각은 임의 배정값<br>' +
+    '· 점검자 ' + INSPECTOR + ' · 확인자 ' + CONFIRMER + '<br>' +
+    (late ? '· <b>사후 전산입력 ' + late + '장</b> (비고에 근거 자동 기재)<br>' : '') +
+    (unres ? '· 제품군 선택이 필요한 ' + unres + '장은 제외됩니다<br>' : '') +
+    '· 날인 사진: ' + (withPhoto ? withPhoto + '장 첨부됨, 나머지는 사진 없이' : '없이 저장') + '<br>· 펼쳐서 수정한 일지는 화면에 입력한 값으로 저장됩니다.</div>' +
+    '<div class="bulk-btns"><button type="button" class="bulk-no" onclick="closeBulk()">취소</button><button type="button" class="bulk-yes" onclick="runBulk()">' + t.length + '장 저장</button></div></div>';
+}
+function closeBulk() { document.getElementById('bulk-ask').innerHTML = ''; }
+async function runBulk() {
+  if (BULK_RUNNING) return; BULK_RUNNING = true;
+  const todo = targets(), box = document.getElementById('bulk-ask'); let ok = 0; const failed = [];
+  for (const i of todo) {
+    box.innerHTML = '<div class="bulk-box"><div class="bulk-q">저장 중… ' + (ok + failed.length + 1) + ' / ' + todo.length + '</div><div class="bulk-detail">' + esc(SHEETS[i].date) + ' · ' + esc(PRODUCTS[SHEETS[i].group].label + ' · ' + (SHEETS[i].ch || '')) + '</div></div>';
+    const payload = buildPayload(i);
+    if (typeof payload === 'string') { failed.push({ i, why: payload }); continue; }
+    try { await postPayload(i, payload); ok++; markDone(i, payload.meta.product_name); } catch (e) { console.error(e); failed.push({ i, why: '네트워크 오류' }); }
+  }
+  BULK_RUNNING = false;
+  if (!failed.length) { box.innerHTML = '<div class="bulk-box done"><div class="bulk-q">✓ ' + ok + '장 저장 완료</div></div>'; showToast(ok + '장 저장 완료! ✓', 'success'); setTimeout(closeBulk, 4000); }
+  else {
+    box.innerHTML = '<div class="bulk-box fail"><div class="bulk-q">' + ok + '장 저장 · ' + failed.length + '장 실패</div><div class="bulk-detail">' +
+      failed.slice(0, 8).map(f => esc(SHEETS[f.i].date) + ' ' + esc(PRODUCTS[SHEETS[f.i].group].label) + ' — ' + esc(f.why)).join('<br>') + (failed.length > 8 ? '<br>외 ' + (failed.length - 8) + '장' : '') +
+      '</div><div class="bulk-btns"><button type="button" class="bulk-no" onclick="closeBulk()">닫기</button><button type="button" class="bulk-yes" onclick="askBulk()">실패분 다시 시도</button></div></div>';
+    showToast(failed.length + '장 저장 실패', 'error');
+  }
+}
+function updateProgress() {
+  const act = SHEETS.filter(s => !s.existing), done = Object.keys(DONE).length, total = act.length;
+  document.getElementById('prog-text').textContent = done + ' / ' + total + ' 장 저장';
+  document.getElementById('prog-sub').textContent = SHEETS.length - total ? '기존 작성 ' + (SHEETS.length - total) + '장 제외' : '';
+  document.getElementById('prog-bar').style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+}
+function showToast(msg, type) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show ' + (type || '');
+  setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+</script>
+</body>
+</html>
